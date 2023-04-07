@@ -3,8 +3,7 @@ package io.leego.ah.openapi.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leego.ah.openapi.dto.ExchangeSaveDTO;
 import io.leego.ah.openapi.entity.Exchange;
-import io.leego.ah.openapi.event.EventType;
-import io.leego.ah.openapi.event.SyncEvent;
+import io.leego.ah.openapi.event.DataSyncEvent;
 import io.leego.ah.openapi.repository.ExchangeRepository;
 import io.leego.ah.openapi.service.ExchangeService;
 import io.leego.ah.openapi.vo.ExchangeVO;
@@ -40,7 +39,7 @@ public class ExchangeServiceImpl extends BaseServiceImpl implements ExchangeServ
                 writeValue(dto.getSellOffers()),
                 Instant.now());
         exchangeRepository.save(exchange);
-        eventPublisher.publishEvent(new SyncEvent(List.of(exchange), EventType.INSERT, "create exchange"));
+        eventPublisher.publishEvent(DataSyncEvent.insert(List.of(exchange), "create exchange"));
     }
 
     @Override

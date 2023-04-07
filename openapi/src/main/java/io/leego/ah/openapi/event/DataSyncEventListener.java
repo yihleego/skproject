@@ -23,11 +23,11 @@ import java.util.concurrent.Executors;
  * @author Leego Yih
  */
 @Component
-public class SyncEventListener implements ApplicationListener<SyncEvent> {
-    private static final Logger logger = LoggerFactory.getLogger(SyncEventListener.class);
+public class DataSyncEventListener implements ApplicationListener<DataSyncEvent> {
+    private static final Logger logger = LoggerFactory.getLogger(DataSyncEventListener.class);
     private final List<Sync> syncs;
 
-    public SyncEventListener(EntityManager entityManager, EntityManagerFactoryBuilder builder, DataSyncProperties properties) {
+    public DataSyncEventListener(EntityManager entityManager, EntityManagerFactoryBuilder builder, DataSyncProperties properties) {
         this.syncs = properties.getDatasource().entrySet().stream()
                 .map(o -> {
                     DataSource dataSource = DataSourceBuilder.create()
@@ -55,10 +55,10 @@ public class SyncEventListener implements ApplicationListener<SyncEvent> {
     }
 
     @Override
-    public void onApplicationEvent(SyncEvent event) {
-        if (event.getType() == EventType.INSERT) {
+    public void onApplicationEvent(DataSyncEvent event) {
+        if (event.getType() == DataSyncEventType.INSERT) {
             execute((List<?>) event.getSource(), event.getTag());
-        } else if (event.getType() == EventType.UPDATE) {
+        } else if (event.getType() == DataSyncEventType.UPDATE) {
             execute((List<?>) event.getSource(), event.getTag());
         }
     }

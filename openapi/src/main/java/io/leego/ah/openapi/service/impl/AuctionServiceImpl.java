@@ -8,8 +8,7 @@ import io.leego.ah.openapi.dto.AuctionQueryDTO;
 import io.leego.ah.openapi.dto.AuctionSaveDTO;
 import io.leego.ah.openapi.entity.Auction;
 import io.leego.ah.openapi.entity.Item;
-import io.leego.ah.openapi.event.EventType;
-import io.leego.ah.openapi.event.SyncEvent;
+import io.leego.ah.openapi.event.DataSyncEvent;
 import io.leego.ah.openapi.repository.AuctionRepository;
 import io.leego.ah.openapi.repository.ItemRepository;
 import io.leego.ah.openapi.service.AuctionService;
@@ -191,7 +190,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         }
         long end = System.currentTimeMillis();
         logger.info("Created auctions({}) in {} ms", list.size(), end - begin);
-        eventPublisher.publishEvent(new SyncEvent(list, EventType.INSERT, "create auction"));
+        eventPublisher.publishEvent(DataSyncEvent.insert(list, "create auction"));
     }
 
     private void updateAuctions(List<Auction> list) {
@@ -201,7 +200,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         }
         long end = System.currentTimeMillis();
         logger.info("Updated auctions({}) in {} ms", list.size(), end - begin);
-        eventPublisher.publishEvent(new SyncEvent(list, EventType.UPDATE, "update auction"));
+        eventPublisher.publishEvent(DataSyncEvent.update(list, "update auction"));
     }
 
     private void endAuctions(List<Auction> list) {
@@ -217,7 +216,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         } else {
             logger.warn("Ended auctions({}->{}) in {} ms", list.size(), count, end - begin);
         }
-        eventPublisher.publishEvent(new SyncEvent(list, EventType.UPDATE, "end auction"));
+        eventPublisher.publishEvent(DataSyncEvent.update(list, "end auction"));
     }
 
     private void skipAuctions(List<Long> list) {

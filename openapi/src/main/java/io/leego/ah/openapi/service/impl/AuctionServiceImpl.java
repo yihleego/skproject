@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,6 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Leego Yih
@@ -63,29 +63,29 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
     public void saveAuctions(AuctionSaveDTO dto) {
         // Auctions `all` come from search results.
         final AuctionDTO[] all = dto.getAll();
-        // Auctions `ended` come from `my bids`, and only save ended auctions,
-        // the bid prices of these auctions are accurate.
+        // Auctions `ended` come from `my bids`, which means that the final bid prices are accurate.
         final AuctionDTO[] ended = dto.getEnded();
         executorService.execute(() -> {
-            if (!ObjectUtils.isEmpty(all)) {
-                logger.info("\n[ALL] Saving all auctions({})", all.length);
-                saveAllAuctions(all);
-                logger.info("[ALL] Saved all auctions({})\n", all.length);
-            }
-            if (!ObjectUtils.isEmpty(ended)) {
-                logger.info("\n[END] Saving ended auctions({})", ended.length);
-                saveEndedAuctions(ended);
-                logger.info("[END] Saved ended auctions({})\n", ended.length);
-            }
+            logger.info("[ALL] Saving auctions(all={}, ended={})", all.length, ended.length);
+            saveAuctionsAsync(all, ended);
+            logger.info("[ALL] Saved auctions(all={}, ended={})", all.length, ended.length);
         });
     }
 
-    private void saveAllAuctions(AuctionDTO[] data) {
-        List<Long> ids = Arrays.stream(data).map(AuctionDTO::getId).toList();
-        // Find the auctions that exist in the database but do not exist in the given ids, which means they are ended
-        List<Auction> endList = auctionRepository.findByIdNotInAndTimeLeftIn(ids, NONE_ENDED);
+    private void saveAuctionsAsync(AuctionDTO[] all, AuctionDTO[] ended) {
+        // Collect all ids
+        List<Long> ids = Stream.of(Arrays.stream(all), Arrays.stream(ended).filter(o -> Objects.equals(o.getTimeLeft(), TimeLeft.ENDED.getCode())))
+                .flatMap(o -> o)
+                .peek(this::trimAuction)
+                .map(AuctionDTO::getId)
+                .toList();
+
+        // Find the auctions that exist in the database but do not exist in the given ids,
+        // which means they are ended. (someone bought it or the time is up)
+        // There is no guarantee that these final bid prices will be accurate.
+        List<Auction> endedList = auctionRepository.findByIdNotInAndTimeLeftIn(ids, NONE_ENDED);
         // Mark the auctions as ended
-        endList.forEach(o -> o.setTimeLeft(TimeLeft.ENDED.getCode()));
+        endedList.forEach(o -> o.setTimeLeft(TimeLeft.ENDED.getCode()));
 
         // Find all auctions with the given ids
         Map<Long, Auction> oldMap = auctionRepository.findAllById(ids)
@@ -94,67 +94,49 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         Instant now = Instant.now();
         List<Auction> create = new ArrayList<>(128);
         List<Auction> update = new ArrayList<>(128);
-        List<Long> skip = new ArrayList<>(data.length);
-        Set<Long> distinct = new HashSet<>(128);
-        for (AuctionDTO dto : data) {
-            trimAuction(dto);
+        List<Long> skip = new ArrayList<>(ids.size());
+        Set<Long> dupe = new HashSet<>(128);
+        for (AuctionDTO dto : all) {
             Auction old = oldMap.get(dto.getId());
-            // Skip if the auction does not change
+            // Update time only if the auction does not change
             if (!isAuctionChanged(dto, old)) {
                 skip.add(old.getId());
                 continue;
             }
-            // Remove if the same auction is present multiple times
-            if (distinct.contains(dto.getId())) {
-                logger.warn("Duplicate auction {}", dto);
+            // Remove if the same auction is present
+            if (!dupe.add(dto.getId())) {
+                logger.warn("Duplicate auction from all: {}", dto);
                 continue;
             }
-            distinct.add(dto.getId());
+            List<Auction> list = old == null ? create : update;
+            list.add(buildAuction(dto, old, now));
+        }
+
+        for (AuctionDTO dto : ended) {
+            Auction old = oldMap.get(dto.getId());
+            // Skip if the auction does not change
+            if (!isAuctionChanged(dto, old)) {
+                continue;
+            }
+            // Remove if the same auction is present
+            if (!dupe.add(dto.getId())) {
+                logger.warn("Duplicate auction from ended: {}", dto);
+                continue;
+            }
             List<Auction> list = old == null ? create : update;
             list.add(buildAuction(dto, old, now));
         }
 
         // End the auctions
-        endAuctions(endList);
+        endAuctions(endedList);
         // Create new auctions
         createAuctions(create);
         // Update the auctions
         updateAuctions(update);
         // Update time only if the auctions haven't changed
         skipAuctions(skip);
-    }
-
-    private void saveEndedAuctions(AuctionDTO[] data) {
-        // Filter out the ended auctions
-        List<Long> ids = Arrays.stream(data)
-                .filter(o -> Objects.equals(o.getTimeLeft(), TimeLeft.ENDED.getCode()))
-                .map(AuctionDTO::getId)
-                .toList();
-        if (ids.isEmpty()) {
-            return;
-        }
-        // Find all auctions with the given ids
-        Map<Long, Auction> oldMap = auctionRepository.findAllById(ids)
-                .stream().collect(Collectors.toMap(Auction::getId, Function.identity()));
-
-        Instant now = Instant.now();
-        List<Auction> create = new ArrayList<>(data.length);
-        List<Auction> update = new ArrayList<>(data.length);
-        for (AuctionDTO dto : data) {
-            trimAuction(dto);
-            Auction old = oldMap.get(dto.getId());
-            // Skip if the auction does not change
-            if (!isAuctionChanged(dto, old)) {
-                continue;
-            }
-            List<Auction> list = old == null ? create : update;
-            list.add(buildAuction(dto, old, now));
-        }
-
-        // Create new auctions
-        createAuctions(create);
-        // Update the auctions
-        updateAuctions(update);
+        // Clear
+        dupe.clear();
     }
 
     private void trimAuction(AuctionDTO dto) {
@@ -223,9 +205,12 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
     }
 
     private void endAuctions(List<Auction> list) {
-        List<Long> ids = list.stream().map(Auction::getId).toList();
         long begin = System.currentTimeMillis();
-        int count = auctionRepository.updateLeftTime(ids, TimeLeft.ENDED.getCode(), Instant.now());
+        int count = 0;
+        if (!list.isEmpty()) {
+            List<Long> ids = list.stream().map(Auction::getId).toList();
+            count = auctionRepository.updateLeftTime(ids, TimeLeft.ENDED.getCode(), Instant.now());
+        }
         long end = System.currentTimeMillis();
         if (list.size() == count) {
             logger.info("Ended auctions({}) in {} ms", count, end - begin);

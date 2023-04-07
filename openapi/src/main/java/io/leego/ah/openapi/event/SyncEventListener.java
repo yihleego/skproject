@@ -72,7 +72,7 @@ public class SyncEventListener implements ApplicationListener<SyncEvent> {
             final EntityManager entityManager = sync.entityManager;
             final ExecutorService executorService = sync.executorService;
             executorService.execute(() -> {
-                logger.info("\tSyncing data({}) to {} ({})", entities.size(), name, tag);
+                long begin = System.currentTimeMillis();
                 EntityTransaction tx = entityManager.getTransaction();
                 tx.begin();
                 try {
@@ -81,12 +81,13 @@ public class SyncEventListener implements ApplicationListener<SyncEvent> {
                     }
                     entityManager.flush();
                     tx.commit();
-                    logger.info("\tSynced data({}) to {} ({})", entities.size(), name, tag);
+                    long end = System.currentTimeMillis();
+                    logger.info("Synced data({}) to {} in {} ms ({})", entities.size(), name, end - begin, tag);
                 } catch (Exception e) {
                     if (tx.isActive()) {
                         tx.rollback();
                     }
-                    logger.error("\tFailed to sync data({}) to {} ({})", entities.size(), name, tag, e);
+                    logger.error("Failed to sync data({}) to {} ({})", entities.size(), name, tag, e);
                 }
             });
         }

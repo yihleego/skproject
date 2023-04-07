@@ -165,11 +165,14 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
             cur.makeNotNew();
             cur.setVariant(old.getVariant());
             cur.setAccessory(old.getAccessory());
-            if (cur.getTimeLeft().equals(old.getTimeLeft())) {
+            if (timeLeft == TimeLeft.VERY_SHORT && !Objects.equals(cur.getBidPrice(), old.getBidPrice())) {
+                // Time is extended with every new bid when the `timeLeft` equals `VERY_SHORT`
+                cur.setEstimatedEndTime(now.plus(timeLeft.getMaxDuration()));
+            } else if (cur.getTimeLeft().equals(old.getTimeLeft())) {
                 // Use the original `estimatedEndTime` if the `timeLeft` does not change
                 cur.setEstimatedEndTime(old.getEstimatedEndTime());
             } else {
-                // Recalculate the `estimatedEndTime`
+                // Recalculate the `estimatedEndTime` if the `timeLeft` changed
                 cur.setEstimatedEndTime(now.plus(cur.getFeatured() ? timeLeft.getFeaturedDuration() : timeLeft.getMaxDuration()));
             }
         }

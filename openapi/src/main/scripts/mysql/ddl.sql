@@ -15,6 +15,7 @@ create table auction
     total              smallint             null comment 'for featured',
     variant            json                 null,
     accessory          json                 null,
+    accurate           tinyint(1) default 0 not null comment '0:no 1:yes',
     created_time       timestamp            not null,
     updated_time       timestamp            not null,
     estimated_end_time timestamp            not null

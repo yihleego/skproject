@@ -33,12 +33,15 @@ public class ExchangeServiceImpl extends BaseServiceImpl implements ExchangeServ
 
     @Override
     public void saveExchanges(ExchangeSaveDTO dto) {
+        long begin = System.currentTimeMillis();
         Exchange exchange = new Exchange(null,
                 dto.getLastPrice(),
                 writeValue(dto.getBuyOffers()),
                 writeValue(dto.getSellOffers()),
                 Instant.now());
         exchangeRepository.save(exchange);
+        long end = System.currentTimeMillis();
+        logger.info("Created exchange in {} ms", end - begin);
         eventPublisher.publishEvent(DataSyncEvent.insert(List.of(exchange), "create exchange"));
     }
 

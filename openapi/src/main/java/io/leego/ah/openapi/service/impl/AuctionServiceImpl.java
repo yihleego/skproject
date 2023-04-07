@@ -95,21 +95,6 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         List<Auction> update = new ArrayList<>(128);
         List<Long> skip = new ArrayList<>(ids.size());
         Set<Long> dupe = new HashSet<>(128);
-        for (AuctionDTO dto : all) {
-            Auction old = oldMap.get(dto.getId());
-            // Update time only if the auction does not change
-            if (!isAuctionChanged(dto, old)) {
-                skip.add(old.getId());
-                continue;
-            }
-            // Remove if the same auction is present
-            if (!dupe.add(dto.getId())) {
-                logger.warn("Duplicate auction from all: {}", dto);
-                continue;
-            }
-            List<Auction> list = old == null ? create : update;
-            list.add(buildAuction(dto, old, now));
-        }
 
         for (AuctionDTO dto : ended) {
             Auction old = oldMap.get(dto.getId());
@@ -123,7 +108,23 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
                 continue;
             }
             List<Auction> list = old == null ? create : update;
-            list.add(buildAuction(dto, old, now));
+            list.add(buildAuction(dto, old, now, true));
+        }
+
+        for (AuctionDTO dto : all) {
+            Auction old = oldMap.get(dto.getId());
+            // Update time only if the auction does not change
+            if (!isAuctionChanged(dto, old)) {
+                skip.add(old.getId());
+                continue;
+            }
+            // Remove if the same auction is present
+            if (!dupe.add(dto.getId())) {
+                logger.warn("Duplicate auction from all: {}", dto);
+                continue;
+            }
+            List<Auction> list = old == null ? create : update;
+            list.add(buildAuction(dto, old, now, false));
         }
 
         // End the auctions
@@ -145,11 +146,12 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         }
     }
 
-    private Auction buildAuction(AuctionDTO dto, Auction old, Instant now) {
+    private Auction buildAuction(AuctionDTO dto, Auction old, Instant now, Boolean accurate) {
         Auction cur = new Auction();
         BeanUtils.copyProperties(dto, cur);
         cur.setCreatedTime(now);
         cur.setUpdatedTime(now);
+        cur.setAccurate(accurate);
         TimeLeft timeLeft = TimeLeft.valueOf(cur.getTimeLeft());
         if (old == null) {
             // Create if the original auction does not exist

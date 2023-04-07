@@ -61,6 +61,8 @@ public class Auction implements Persistable<Long>, Serializable {
     /** The accessories. */
     @Column(updatable = false)
     private String accessory;
+    /** Whether it is accurate. */
+    private Boolean accurate;
     @Column(updatable = false)
     private Instant createdTime;
     private Instant updatedTime;

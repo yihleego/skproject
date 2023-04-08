@@ -8,7 +8,6 @@ import io.leego.ah.openapi.util.TrimUtils;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,7 +24,6 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class ItemQueryDTO extends PageRequest {
     /** Item name must be at least 2 characters. */
-    @Size(min = 2)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String name;
     /** @see io.leego.ah.openapi.constant.ItemGroup */

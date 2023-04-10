@@ -50,7 +50,8 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
     private final ApplicationEventPublisher eventPublisher;
     private final ExecutorService executorService;
 
-    public AuctionServiceImpl(ObjectMapper objectMapper, AuctionRepository auctionRepository, ItemRepository itemRepository, ApplicationEventPublisher eventPublisher) {
+    public AuctionServiceImpl(ObjectMapper objectMapper, AuctionRepository auctionRepository,
+                              ItemRepository itemRepository, ApplicationEventPublisher eventPublisher) {
         super(objectMapper);
         this.auctionRepository = auctionRepository;
         this.itemRepository = itemRepository;
@@ -299,4 +300,5 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         }
         return newPage;
     }
+
 }

@@ -23,6 +23,7 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class ItemQueryDTO extends PageRequest {
+    private List<String> id;
     /** Item name must be at least 2 characters. */
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String name;
@@ -36,7 +37,7 @@ public class ItemQueryDTO extends PageRequest {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<Integer> star;
 
-    @Override @NotNull @Min(0) @Max(10000)
+    @Override @NotNull @Min(0) @Max(1000)
     public Integer getPage() {
         return page;
     }
@@ -48,7 +49,8 @@ public class ItemQueryDTO extends PageRequest {
 
     public QPredicate toPredicate() {
         return QPredicate.create()
-                .and(QItem.item.name::likeIgnoreCase, TrimUtils.trim(name, s -> "%" + s + "%"))
+                .and(QItem.item.id::in, id)
+                .and(QItem.item.name::likeIgnoreCase, TrimUtils.trim(name, s -> s.length() >= 2 ? "%" + s + "%" : null))
                 .and(QItem.item.group::in, TrimUtils.trim(group))
                 .and(QItem.item.location::in, TrimUtils.trim(location))
                 .and(QItem.item.star::in, TrimUtils.trim(star));

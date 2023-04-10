@@ -159,21 +159,22 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
             cur.setVariant(writeValue(dto.getVariant()));
             cur.setAccessory(writeValue(dto.getAccessory()));
             // Featured auctions have a duration that may last up to 4 days
-            cur.setEstimatedEndTime(now.plus(cur.getFeatured() ? timeLeft.getFeaturedDuration() : timeLeft.getMaxDuration()));
+            cur.setEstimatedEndTime(now.plus(timeLeft.getDuration(cur.getFeatured())));
         } else {
             // Update if the original auction exists
             cur.makeNotNew();
             cur.setVariant(old.getVariant());
             cur.setAccessory(old.getAccessory());
+            cur.setEstimatedEndTime(old.getEstimatedEndTime());
             if (timeLeft == TimeLeft.VERY_SHORT && !Objects.equals(cur.getBidPrice(), old.getBidPrice())) {
                 // Time is extended with every new bid when the `timeLeft` equals `VERY_SHORT`
-                cur.setEstimatedEndTime(now.plus(timeLeft.getMaxDuration()));
-            } else if (cur.getTimeLeft().equals(old.getTimeLeft())) {
-                // Use the original `estimatedEndTime` if the `timeLeft` does not change
-                cur.setEstimatedEndTime(old.getEstimatedEndTime());
-            } else {
+                cur.setEstimatedEndTime(now.plus(timeLeft.getDuration()));
+            } else if (!cur.getTimeLeft().equals(old.getTimeLeft())) {
                 // Recalculate the `estimatedEndTime` if the `timeLeft` changed
-                cur.setEstimatedEndTime(now.plus(cur.getFeatured() ? timeLeft.getFeaturedDuration() : timeLeft.getMaxDuration()));
+                Instant newEstimatedEndTime = now.plus(timeLeft.getDuration(cur.getFeatured()));
+                if (newEstimatedEndTime.isBefore(old.getEstimatedEndTime())) {
+                    cur.setEstimatedEndTime(newEstimatedEndTime);
+                }
             }
         }
         return cur;

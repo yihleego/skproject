@@ -11,13 +11,10 @@ import java.io.IOException;
  * @author Leego Yih
  */
 public class SortSerializer extends JsonSerializer<Sort> {
-
     @Override
     public void serialize(Sort value, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-        if (value == null) {
-            return;
+        if (value != null) {
+            jsonGenerator.writeString(Sort.format(value));
         }
-        jsonGenerator.writeString(Sort.format(value));
     }
-
 }

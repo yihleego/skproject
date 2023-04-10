@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,12 +26,9 @@ import java.time.Instant;
 /**
  * @author Leego Yih
  */
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = {"item", "_new"})
-@EqualsAndHashCode(exclude = {"item", "_new"})
 @FieldNameConstants
 @Entity
 @Table(name = "auction")
@@ -68,13 +66,19 @@ public class Auction implements Persistable<Long>, Serializable {
     private Instant updatedTime;
     /** The estimated end time, not guaranteed to be accurate. */
     private Instant estimatedEndTime;
+
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "itemId", referencedColumnName = "id", insertable = false, updatable = false)
     private Item item;
+
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Transient
     private transient boolean _new = true;
 
@@ -94,5 +98,27 @@ public class Auction implements Persistable<Long>, Serializable {
 
     public void makeNotNew() {
         this._new = false;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @FieldNameConstants
+    public static class Variant {
+        /** @see io.leego.ah.openapi.constant.VariantName */
+        private String name;
+        /** @see io.leego.ah.openapi.constant.VariantValue */
+        private String value;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @FieldNameConstants
+    public static class Accessory {
+        /** The accessory id is the item id */
+        private String id;
+        /** @see io.leego.ah.openapi.constant.ItemLocation */
+        private String location;
     }
 }

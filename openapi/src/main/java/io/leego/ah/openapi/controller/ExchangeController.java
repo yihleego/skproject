@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * @author Leego Yih
@@ -39,6 +40,7 @@ public class ExchangeController {
      * Returns the latest exchange.
      *
      * @return the latest exchange.
+     * @throws HttpClientErrorException.NotFound if the config is not found.
      */
     @Privileged
     @GetMapping("latest")
@@ -46,4 +48,5 @@ public class ExchangeController {
     public ExchangeVO getLatestExchange() {
         return auctionService.getLatestExchange();
     }
+
 }

@@ -11,14 +11,9 @@ import java.io.IOException;
  * @author Leego Yih
  */
 public class SortDeserializer extends JsonDeserializer<Sort> {
-
     @Override
     public Sort deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
         String value = jsonParser.getValueAsString();
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return Sort.parse(value);
+        return value == null || value.isBlank() ? null : Sort.parse(value);
     }
-
 }

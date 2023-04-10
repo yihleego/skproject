@@ -1,6 +1,5 @@
 package io.leego.ah.openapi.databind;
 
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.leego.ah.openapi.util.Sort;
 
@@ -21,10 +20,5 @@ public class SortModule extends SimpleModule {
     @Override
     public String getModuleName() {
         return "SortModule";
-    }
-
-    @Override
-    public Version version() {
-        return Version.unknownVersion();
     }
 }

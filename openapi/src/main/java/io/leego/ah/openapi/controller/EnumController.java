@@ -22,7 +22,7 @@ import java.util.Map;
  * @author Leego Yih
  */
 @RestController
-@RequestMapping
+@RequestMapping("enums")
 public class EnumController {
     public static final Map<String, List<Option<String, String>>> ENUMS;
 
@@ -43,9 +43,10 @@ public class EnumController {
      * @return all enums.
      */
     @Privileged
-    @GetMapping("enums")
+    @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public Map<String, List<Option<String, String>>> listAllEnums() {
         return ENUMS;
     }
+
 }

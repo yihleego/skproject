@@ -1,4 +1,4 @@
-package io.leego.ah.openapi.event;
+package io.leego.ah.openapi.datasync;
 
 import org.springframework.context.ApplicationEvent;
 

@@ -26,11 +26,13 @@ public class ItemServiceImpl extends BaseServiceImpl implements ItemService {
     @Override
     public Page<ItemVO> listItems(ItemQueryDTO dto) {
         Page<Item> page = itemRepository.findAll(dto.toPredicate(), dto);
-        return page.map(item -> {
-            ItemVO itemVO = new ItemVO();
-            BeanUtils.copyProperties(item, itemVO);
-            itemVO.setColorization(readValue(item.getColorization(), ColorizationVO[].class));
-            return itemVO;
-        });
+        return page.map(this::toVO);
+    }
+
+    private ItemVO toVO(Item item) {
+        ItemVO itemVO = new ItemVO();
+        BeanUtils.copyProperties(item, itemVO);
+        itemVO.setColorization(readValue(item.getColorization(), ColorizationVO[].class));
+        return itemVO;
     }
 }

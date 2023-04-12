@@ -68,7 +68,7 @@ create index idx_exchange_created_time on exchange (`created_time`);
 create table config
 (
     id           bigint auto_increment primary key not null,
-    `group`      varchar(191)                      not null comment 'basic,auction,exchange',
+    `group`      varchar(191)                      not null,
     `key`        varchar(191)                      not null,
     `value`      text                              null,
     version      int     default 1                 not null,
@@ -76,8 +76,8 @@ create table config
     created_time timestamp                         not null,
     updated_time timestamp                         null
 );
-create unique index uk_config_key on config (`key`);
+create unique index uk_config_group_key on config (`group`, `key`);
 insert into config(`group`, `key`, `value`, status, created_time, updated_time)
-values ('auction', 'auction_auto_bid', '[{"buyPrice":200000,"bidPrice":11,"fallback":true},{"exprs":[{"key":"itemId","value":"Upgrade/Lockboxes/Character","expr":"equals"}],"buyPrice":200000,"bidPrice":11},{"exprs":[{"key":"itemId","value":"Weapon/Handgun/Overcharged Mixmaster","expr":"equals"}],"buyPrice":1000000,"bidPrice":11},{"exprs":[{"key":"itemId","value":"Gear/Trinket/Somnambulist''s Totem","expr":"equals"}],"buyPrice":1000000,"bidPrice":11},{"exprs":[{"key":"itemId","value":"Weapon/Sword/Caladbolg","expr":"equals"}],"buyPrice":200000,"bidPrice":11},{"exprs":[{"key":"itemId","value":"Sprite/","expr":"startsWith"}],"buyPrice":50000,"bidPrice":11},{"exprs":[{"key":"variantName","value":"CHARGE_TIME_REDUCTION","expr":"equals"},{"key":"variantValue","value":"VERY_HIGH","expr":"equals"}],"buyPrice":50000,"bidPrice":11},{"exprs":[{"key":"variantName","value":"ATTACK_SPEED_INCREASED","expr":"equals"},{"key":"variantValue","value":"HIGH","expr":"equals"}],"buyPrice":30000,"bidPrice":11}]',1, now(), null),
-       ('exchange', 'exchange_auto_offer', '{"buyPrice":0,"sellPrice":7000}', 1, now(), null);
+values ('auctionbot', 'autobid', '{"fallback":{"buyPrice":0,"bidPrice":10},"items":[{"predicate":[{"key":"itemId","value":"Upgrade/Lockboxes/Character","operation":"equals"}],"buyPrice":200000,"bidPrice":10},{"predicate":[{"key":"itemId","value":"Weapon/Handgun/Overcharged Mixmaster","operation":"equals"}],"buyPrice":1000000,"bidPrice":10},{"predicate":[{"key":"itemId","value":"Gear/Trinket/Somnambulist''s Totem","operation":"equals"}],"buyPrice":1000000,"bidPrice":10},{"predicate":[{"key":"itemId","value":"Weapon/Sword/Caladbolg","operation":"equals"}],"buyPrice":200000,"bidPrice":10},{"predicate":[{"key":"itemId","value":"Sprite/","operation":"startsWith"}],"buyPrice":50000,"bidPrice":10},{"predicate":[{"key":"variantName","value":"CHARGE_TIME_REDUCTION","operation":"equals"},{"key":"variantValue","value":"VERY_HIGH","operation":"equals"}],"buyPrice":50000,"bidPrice":10},{"predicate":[{"key":"variantName","value":"ATTACK_SPEED_INCREASED","operation":"equals"},{"key":"variantValue","value":"HIGH","operation":"equals"}],"buyPrice":30000,"bidPrice":10}]}', 1, now(), null),
+       ('marketbot', 'autooffer', '{"buyPrice":0,"sellPrice":7000}', 1, now(), null);
 

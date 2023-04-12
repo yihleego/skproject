@@ -1,4 +1,4 @@
-package io.leego.ah.openapi.event;
+package io.leego.ah.openapi.datasync;
 
 import io.leego.ah.openapi.config.DataSyncProperties;
 import jakarta.persistence.EntityManager;

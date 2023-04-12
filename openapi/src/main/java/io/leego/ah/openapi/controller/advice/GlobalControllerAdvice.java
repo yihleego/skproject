@@ -1,6 +1,5 @@
 package io.leego.ah.openapi.controller.advice;
 
-import io.leego.ah.openapi.exception.HttpStatusException;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,12 +48,6 @@ public class GlobalControllerAdvice {
     @ExceptionHandler
     public void handleException(Exception e) {
         logger.error("", e);
-    }
-
-    @ExceptionHandler
-    public void handleHttpStatusException(HttpStatusException e, HttpServletResponse response) {
-        logger.error("", e);
-        response.setStatus(e.getStatus());
     }
 
     @ExceptionHandler

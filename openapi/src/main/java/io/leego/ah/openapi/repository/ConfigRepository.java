@@ -11,9 +11,9 @@ import java.util.Optional;
  */
 public interface ConfigRepository extends JpaRepository<Config, Long>, QuerydslRepository<Config> {
 
-    Optional<Config> findByKey(String key);
+    Optional<Config> findByGroupAndKey(String group, String key);
 
-    @Query("select version from Config where key in ?1")
-    Integer findVersionByKey(String key);
+    @Query("select version from Config where group in ?1 and key in ?2")
+    Optional<Integer> findVersionByGroupAndKey(String group, String key);
 
 }

@@ -4,11 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.BooleanTemplate;
 import com.querydsl.core.types.dsl.Expressions;
-import io.leego.ah.openapi.entity.Accessory;
 import io.leego.ah.openapi.entity.Auction;
 import io.leego.ah.openapi.entity.QAuction;
 import io.leego.ah.openapi.entity.QItem;
-import io.leego.ah.openapi.entity.Variant;
 import io.leego.ah.openapi.util.PageRequest;
 import io.leego.ah.openapi.util.QPredicate;
 import io.leego.ah.openapi.util.TrimUtils;
@@ -88,11 +86,11 @@ public class AuctionQueryDTO extends PageRequest {
                 .and(QAuction.auction.bidPrice::between, minBidPrice, maxBidPrice)
                 .and(QAuction.auction.bidStatus::in, TrimUtils.trim(bidStatus))
                 .and(QAuction.auction.timeLeft::in, TrimUtils.trim(timeLeft))
-                .and(jsonSearch(variantName, Auction.Fields.variant, Variant.Fields.name))
-                .and(jsonSearch(variantValue, Auction.Fields.variant, Variant.Fields.value))
+                .and(jsonSearch(variantName, Auction.Fields.variant, Auction.Variant.Fields.name))
+                .and(jsonSearch(variantValue, Auction.Fields.variant, Auction.Variant.Fields.value))
                 .and(accessory == null ? null : accessory.contains("ANY")
                         ? QAuction.auction.accessory.isNotNull()
-                        : jsonSearch(accessory, Auction.Fields.accessory, Accessory.Fields.id))
+                        : jsonSearch(accessory, Auction.Fields.accessory, Auction.Accessory.Fields.id))
                 .and(QItem.item.name::likeIgnoreCase, TrimUtils.trim(name, s -> s.length() >= 2 ? "%" + s + "%" : null))
                 .and(QItem.item.group::in, TrimUtils.trim(group))
                 .and(QItem.item.location::in, TrimUtils.trim(location))

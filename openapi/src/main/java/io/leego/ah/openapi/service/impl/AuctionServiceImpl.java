@@ -3,12 +3,12 @@ package io.leego.ah.openapi.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leego.ah.openapi.constant.BidStatus;
 import io.leego.ah.openapi.constant.TimeLeft;
+import io.leego.ah.openapi.datasync.DataSyncEvent;
 import io.leego.ah.openapi.dto.AuctionDTO;
 import io.leego.ah.openapi.dto.AuctionQueryDTO;
 import io.leego.ah.openapi.dto.AuctionSaveDTO;
 import io.leego.ah.openapi.entity.Auction;
 import io.leego.ah.openapi.entity.Item;
-import io.leego.ah.openapi.event.DataSyncEvent;
 import io.leego.ah.openapi.repository.AuctionRepository;
 import io.leego.ah.openapi.repository.ItemRepository;
 import io.leego.ah.openapi.service.AuctionService;
@@ -250,55 +250,58 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
     @Override
     public Page<AuctionVO> listAuctions(AuctionQueryDTO dto) {
         Page<Auction> page = auctionRepository.findAll(dto.toPredicate(), dto);
-
-        List<ItemVO> allItems = new ArrayList<>(page.getSize());
-        List<AccessoryVO> allAccessories = new ArrayList<>();
+        if (page.isEmpty()) {
+            return Page.empty(dto);
+        }
+        // Hold items and accessories for filling data later
+        List<ItemVO> items = new ArrayList<>(page.getSize());
+        List<AccessoryVO> accessories = new ArrayList<>();
         Page<AuctionVO> newPage = page.map(auction -> {
-            AuctionVO auctionVO = new AuctionVO();
-            BeanUtils.copyProperties(auction, auctionVO);
-            // Set item
-            ItemVO itemVO = new ItemVO();
-            itemVO.setId(auction.getItemId());
-            auctionVO.setItem(itemVO);
-            allItems.add(itemVO);
-            // Set variants
-            VariantVO[] variants = readValue(auction.getVariant(), VariantVO[].class);
-            auctionVO.setVariant(variants);
-            // Set accessories
-            AccessoryVO[] accessories = readValue(auction.getAccessory(), AccessoryVO[].class);
-            auctionVO.setAccessory(accessories);
-            if (accessories != null) {
-                Collections.addAll(allAccessories, accessories);
+            AuctionVO auctionVO = toVO(auction);
+            items.add(auctionVO.getItem());
+            if (auctionVO.getAccessory() != null) {
+                Collections.addAll(accessories, auctionVO.getAccessory());
             }
             return auctionVO;
         });
+        // Find all items and accessories
+        List<String> itemIds = new ArrayList<>(items.size() + accessories.size());
+        itemIds.addAll(items.stream().map(ItemVO::getId).toList());
+        itemIds.addAll(accessories.stream().map(AccessoryVO::getId).toList());
+        Map<String, Item> itemMap = itemRepository.findAllById(itemIds).stream()
+                .collect(Collectors.toMap(Item::getId, Function.identity()));
         // Fill items
-        if (!allItems.isEmpty()) {
-            List<String> itemIds = allItems.stream().map(ItemVO::getId).distinct().toList();
-            Map<String, Item> itemMap = itemRepository.findAllById(itemIds).stream()
-                    .collect(Collectors.toMap(Item::getId, Function.identity()));
-            for (ItemVO vo : allItems) {
-                Item item = itemMap.get(vo.getId());
-                if (item != null) {
-                    BeanUtils.copyProperties(item, vo);
-                    vo.setColorization(readValue(item.getColorization(), ColorizationVO[].class));
-                }
+        for (ItemVO vo : items) {
+            Item item = itemMap.get(vo.getId());
+            if (item != null) {
+                BeanUtils.copyProperties(item, vo);
+                vo.setColorization(readValue(item.getColorization(), ColorizationVO[].class));
             }
         }
         // Fill accessories
-        if (!allAccessories.isEmpty()) {
-            List<String> accessoryIds = allAccessories.stream().map(AccessoryVO::getId).distinct().toList();
-            Map<String, Item> accessoryMap = itemRepository.findAllById(accessoryIds).stream()
-                    .collect(Collectors.toMap(Item::getId, Function.identity()));
-            for (AccessoryVO vo : allAccessories) {
-                Item accessory = accessoryMap.get(vo.getId());
-                if (accessory != null) {
-                    BeanUtils.copyProperties(accessory, vo);
-                    vo.setColorization(readValue(accessory.getColorization(), ColorizationVO[].class));
-                }
+        for (AccessoryVO vo : accessories) {
+            Item accessory = itemMap.get(vo.getId());
+            if (accessory != null) {
+                BeanUtils.copyProperties(accessory, vo);
+                vo.setColorization(readValue(accessory.getColorization(), ColorizationVO[].class));
             }
         }
         return newPage;
     }
 
+    private AuctionVO toVO(Auction auction) {
+        AuctionVO auctionVO = new AuctionVO();
+        BeanUtils.copyProperties(auction, auctionVO);
+        // Set item
+        ItemVO itemVO = new ItemVO();
+        itemVO.setId(auction.getItemId());
+        auctionVO.setItem(itemVO);
+        // Set variants
+        VariantVO[] variants = readValue(auction.getVariant(), VariantVO[].class);
+        auctionVO.setVariant(variants);
+        // Set accessories
+        AccessoryVO[] accessories = readValue(auction.getAccessory(), AccessoryVO[].class);
+        auctionVO.setAccessory(accessories);
+        return auctionVO;
+    }
 }

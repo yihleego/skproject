@@ -47,7 +47,7 @@ public class ConfigController {
      */
     @GetMapping("{group}/{key}")
     @ResponseStatus(HttpStatus.OK)
-    public ConfigVO getConfig(@PathVariable String group, @PathVariable String key) {
+    public ConfigVO getConfig(@PathVariable("group") String group, @PathVariable("key") String key) {
         return configService.getConfig(group, key);
     }
 
@@ -60,7 +60,7 @@ public class ConfigController {
      */
     @GetMapping("{group}/{key}/version")
     @ResponseStatus(HttpStatus.OK)
-    public Integer getConfigVersion(@PathVariable String group, @PathVariable String key) {
+    public Integer getConfigVersion(@PathVariable("group") String group, @PathVariable("key") String key) {
         return configService.getConfigVersion(group, key);
     }
 

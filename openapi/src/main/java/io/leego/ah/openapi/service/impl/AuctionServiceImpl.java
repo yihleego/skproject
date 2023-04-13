@@ -101,6 +101,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         List<Long> skips = new ArrayList<>(ids.size());
         Set<Long> dupes = new HashSet<>();
         List<AuctionLog> logs = new ArrayList<>();
+        List<AuctionLog> xlogs = new ArrayList<>();
 
         for (AuctionDTO dto : ended) {
             Auction old = oldMap.get(dto.getId());
@@ -134,6 +135,8 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
             list.add(buildAuction(dto, old, now, false));
             if (isStatusChanged(dto, old)) {
                 logs.add(buildAuctionLog(dto, now));
+            } else {
+                xlogs.add(buildAuctionLog(dto, now));
             }
         }
 
@@ -145,8 +148,10 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         if (!updates.isEmpty()) {updateAuctions(updates);}
         // Update time only if the auctions haven't changed
         if (!skips.isEmpty()) {skipAuctions(skips);}
-        // Create new logs
+        // Create logs
         if (!logs.isEmpty()) {createAuctionLogs(logs);}
+        // Sync logs
+        syncAuctionLogs(logs, xlogs);
         // Clear
         dupes.clear();
     }
@@ -259,7 +264,15 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         auctionLogRepository.saveAll(list);
         long end = System.currentTimeMillis();
         logger.info("Created auction logs({}) in {} ms", list.size(), end - begin);
-        eventPublisher.publishEvent(DataSyncEvent.insert(list, "create auction log"));
+    }
+
+    private void syncAuctionLogs(List<AuctionLog> logs, List<AuctionLog> xlogs) {
+        if (!logs.isEmpty()) {
+            eventPublisher.publishEvent(DataSyncEvent.insert(logs, "create auction log"));
+        }
+        if (!xlogs.isEmpty()) {
+            eventPublisher.publishEvent(DataSyncEvent.insert(xlogs, "create auction log(x)"));
+        }
     }
 
     private static final List<String> NONE_ENDED = List.of(

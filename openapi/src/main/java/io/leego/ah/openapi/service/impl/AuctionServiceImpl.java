@@ -8,7 +8,9 @@ import io.leego.ah.openapi.dto.AuctionDTO;
 import io.leego.ah.openapi.dto.AuctionQueryDTO;
 import io.leego.ah.openapi.dto.AuctionSaveDTO;
 import io.leego.ah.openapi.entity.Auction;
+import io.leego.ah.openapi.entity.AuctionLog;
 import io.leego.ah.openapi.entity.Item;
+import io.leego.ah.openapi.repository.AuctionLogRepository;
 import io.leego.ah.openapi.repository.AuctionRepository;
 import io.leego.ah.openapi.repository.ItemRepository;
 import io.leego.ah.openapi.service.AuctionService;
@@ -45,17 +47,19 @@ import java.util.stream.Stream;
 @Service
 public class AuctionServiceImpl extends BaseServiceImpl implements AuctionService {
     private static final Logger logger = LoggerFactory.getLogger(AuctionServiceImpl.class);
-    private final AuctionRepository auctionRepository;
-    private final ItemRepository itemRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuctionRepository auctionRepository;
+    private final AuctionLogRepository auctionLogRepository;
+    private final ItemRepository itemRepository;
     private final ExecutorService executorService;
 
-    public AuctionServiceImpl(ObjectMapper objectMapper, AuctionRepository auctionRepository,
-                              ItemRepository itemRepository, ApplicationEventPublisher eventPublisher) {
+    public AuctionServiceImpl(ObjectMapper objectMapper, ApplicationEventPublisher eventPublisher,
+                              AuctionRepository auctionRepository, AuctionLogRepository auctionLogRepository, ItemRepository itemRepository) {
         super(objectMapper);
-        this.auctionRepository = auctionRepository;
-        this.itemRepository = itemRepository;
         this.eventPublisher = eventPublisher;
+        this.auctionRepository = auctionRepository;
+        this.auctionLogRepository = auctionLogRepository;
+        this.itemRepository = itemRepository;
         this.executorService = Executors.newSingleThreadExecutor();
     }
 
@@ -83,61 +87,68 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         // Find the auctions that exist in the database but do not exist in the given ids,
         // which means they are ended. (someone bought it or the time is up)
         // There is no guarantee that these final bid prices will be accurate.
-        List<Auction> endedList = auctionRepository.findByIdNotInAndTimeLeftIn(ids, NONE_ENDED);
+        List<Auction> ends = auctionRepository.findByIdNotInAndTimeLeftIn(ids, NONE_ENDED);
         // Mark the auctions as ended
-        endedList.forEach(o -> o.setTimeLeft(TimeLeft.ENDED.getCode()));
+        ends.forEach(o -> o.setTimeLeft(TimeLeft.ENDED.getCode()));
 
         // Find all auctions with the given ids
         Map<Long, Auction> oldMap = auctionRepository.findAllById(ids)
                 .stream().collect(Collectors.toMap(Auction::getId, Function.identity()));
 
         Instant now = Instant.now();
-        List<Auction> create = new ArrayList<>(128);
-        List<Auction> update = new ArrayList<>(128);
-        List<Long> skip = new ArrayList<>(ids.size());
-        Set<Long> dupe = new HashSet<>(128);
+        List<Auction> creates = new ArrayList<>();
+        List<Auction> updates = new ArrayList<>();
+        List<Long> skips = new ArrayList<>(ids.size());
+        Set<Long> dupes = new HashSet<>();
+        List<AuctionLog> logs = new ArrayList<>();
 
         for (AuctionDTO dto : ended) {
             Auction old = oldMap.get(dto.getId());
             // Skip if the auction does not change
-            if (!isAuctionChanged(dto, old)) {
+            if (!isAnyChanged(dto, old)) {
                 continue;
             }
             // Remove if the same auction is present
-            if (!dupe.add(dto.getId())) {
+            if (!dupes.add(dto.getId())) {
                 logger.warn("Duplicate auction from ended: {}", dto);
                 continue;
             }
-            List<Auction> list = old == null ? create : update;
+            List<Auction> list = old == null ? creates : updates;
             list.add(buildAuction(dto, old, now, true));
+            logs.add(buildAuctionLog(dto, now));
         }
 
         for (AuctionDTO dto : all) {
             Auction old = oldMap.get(dto.getId());
             // Update time only if the auction does not change
-            if (!isAuctionChanged(dto, old)) {
-                skip.add(old.getId());
+            if (!isAnyChanged(dto, old)) {
+                skips.add(old.getId());
                 continue;
             }
             // Remove if the same auction is present
-            if (!dupe.add(dto.getId())) {
+            if (!dupes.add(dto.getId())) {
                 logger.warn("Duplicate auction from all: {}", dto);
                 continue;
             }
-            List<Auction> list = old == null ? create : update;
+            List<Auction> list = old == null ? creates : updates;
             list.add(buildAuction(dto, old, now, false));
+            if (isStatusChanged(dto, old)) {
+                logs.add(buildAuctionLog(dto, now));
+            }
         }
 
         // End the auctions
-        endAuctions(endedList);
+        if (!ends.isEmpty()) {endAuctions(ends);}
         // Create new auctions
-        createAuctions(create);
+        if (!creates.isEmpty()) {createAuctions(creates);}
         // Update the auctions
-        updateAuctions(update);
+        if (!updates.isEmpty()) {updateAuctions(updates);}
         // Update time only if the auctions haven't changed
-        skipAuctions(skip);
+        if (!skips.isEmpty()) {skipAuctions(skips);}
+        // Create new logs
+        if (!logs.isEmpty()) {createAuctionLogs(logs);}
         // Clear
-        dupe.clear();
+        dupes.clear();
     }
 
     private void trimAuction(AuctionDTO dto) {
@@ -181,7 +192,12 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         return cur;
     }
 
-    private boolean isAuctionChanged(AuctionDTO dto, Auction old) {
+    private AuctionLog buildAuctionLog(AuctionDTO dto, Instant now) {
+        return new AuctionLog(null, dto.getId(), dto.getBidPrice(), dto.getBidStatus(), dto.getTimeLeft(), now);
+    }
+
+    /** Returns true if there is any change with {@code bidPrice}, {@code bidStatus}, {@code timeLeft} or {@code remaining}. */
+    private boolean isAnyChanged(AuctionDTO dto, Auction old) {
         // Only the following values are mutable
         return old == null
                 || !Objects.equals(old.getBidPrice(), dto.getBidPrice())
@@ -190,11 +206,17 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
                 || !Objects.equals(old.getRemaining(), dto.getRemaining());
     }
 
+    /** Returns true if there is any change with {@code bidStatus} or {@code timeLeft}. */
+    private boolean isStatusChanged(AuctionDTO dto, Auction old) {
+        // Check bidStatus and timeLeft
+        return old == null
+                || !Objects.equals(old.getBidStatus(), dto.getBidStatus())
+                || !Objects.equals(old.getTimeLeft(), dto.getTimeLeft());
+    }
+
     private void createAuctions(List<Auction> list) {
         long begin = System.currentTimeMillis();
-        if (!list.isEmpty()) {
-            auctionRepository.saveAllAndFlush(list);
-        }
+        auctionRepository.saveAllAndFlush(list);
         long end = System.currentTimeMillis();
         logger.info("Created auctions({}) in {} ms", list.size(), end - begin);
         eventPublisher.publishEvent(DataSyncEvent.insert(list, "create auction"));
@@ -202,9 +224,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
 
     private void updateAuctions(List<Auction> list) {
         long begin = System.currentTimeMillis();
-        if (!list.isEmpty()) {
-            auctionRepository.saveAllAndFlush(list);
-        }
+        auctionRepository.saveAllAndFlush(list);
         long end = System.currentTimeMillis();
         logger.info("Updated auctions({}) in {} ms", list.size(), end - begin);
         eventPublisher.publishEvent(DataSyncEvent.update(list, "update auction"));
@@ -212,11 +232,8 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
 
     private void endAuctions(List<Auction> list) {
         long begin = System.currentTimeMillis();
-        int count = 0;
-        if (!list.isEmpty()) {
-            List<Long> ids = list.stream().map(Auction::getId).toList();
-            count = auctionRepository.updateLeftTime(ids, TimeLeft.ENDED.getCode(), Instant.now());
-        }
+        List<Long> ids = list.stream().map(Auction::getId).toList();
+        int count = auctionRepository.updateLeftTime(ids, TimeLeft.ENDED.getCode(), Instant.now());
         long end = System.currentTimeMillis();
         if (list.size() == count) {
             logger.info("Ended auctions({}) in {} ms", count, end - begin);
@@ -228,16 +245,21 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
 
     private void skipAuctions(List<Long> list) {
         long begin = System.currentTimeMillis();
-        int count = 0;
-        if (!list.isEmpty()) {
-            count = auctionRepository.updateUpdatedTime(list, Instant.now());
-        }
+        int count = auctionRepository.updateUpdatedTime(list, Instant.now());
         long end = System.currentTimeMillis();
         if (list.size() == count) {
             logger.info("Skipped auctions({}) in {} ms", count, end - begin);
         } else {
             logger.warn("Skipped auctions({}->{}) in {} ms", list.size(), count, end - begin);
         }
+    }
+
+    private void createAuctionLogs(List<AuctionLog> list) {
+        long begin = System.currentTimeMillis();
+        auctionLogRepository.saveAll(list);
+        long end = System.currentTimeMillis();
+        logger.info("Created auction logs({}) in {} ms", list.size(), end - begin);
+        eventPublisher.publishEvent(DataSyncEvent.insert(list, "create auction log"));
     }
 
     private static final List<String> NONE_ENDED = List.of(

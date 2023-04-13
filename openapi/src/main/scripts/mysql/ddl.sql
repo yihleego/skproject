@@ -4,11 +4,11 @@ use sk;
 create table auction
 (
     id                 bigint primary key   not null,
-    item_id            varchar(191)         not null,
+    item_id            varchar(128)         not null,
     buy_price          int                  null,
     bid_price          int                  null,
-    bid_status         varchar(20)          not null comment 'NO_BID,BID,HIGH_BIDDER,OUTBID,WATCHING',
-    time_left          varchar(20)          not null comment 'VERY_SHORT,SHORT,MEDIUM,LONG,VERY_LONG,ENDED,CANCELLED',
+    bid_status         varchar(6)           not null comment 'NO_BID,BID',
+    time_left          varchar(10)          not null comment 'VERY_SHORT,SHORT,MEDIUM,LONG,VERY_LONG,ENDED,CANCELLED',
     count              smallint             not null,
     featured           tinyint(1) default 0 not null comment '0:no 1:yes',
     remaining          smallint             null comment 'for featured',
@@ -31,23 +31,23 @@ create table auction_log
 (
     id           bigint auto_increment primary key not null,
     auction_id   bigint                            not null,
-    buy_price    int                               null,
     bid_price    int                               null,
-    status       tinyint                           not null comment '0:bid 1:buy',
-    created_time timestamp                         not null,
-    updated_time timestamp                         null
+    bid_status   varchar(6)                        not null comment 'NO_BID,BID',
+    time_left    varchar(10)                       not null comment 'VERY_SHORT,SHORT,MEDIUM,LONG,VERY_LONG,ENDED,CANCELLED',
+    created_time timestamp                         not null
 );
+create index idx_auction_log_auction_id on auction_log (auction_id);
 
 create table item
 (
-    id           varchar(191) primary key not null,
-    name         varchar(191)             not null,
-    `group`      varchar(40)              not null,
-    icon         varchar(191)             not null,
+    id           varchar(128) primary key not null,
+    name         varchar(64)              not null,
+    `group`      varchar(16)              not null,
+    icon         varchar(128)             not null,
     description  varchar(512)             null,
     star         tinyint    default 0     not null comment '0-5',
     level        tinyint(1) default 0     not null comment '0:item 1:level-item',
-    location     varchar(40)              null,
+    location     varchar(16)              null,
     colorization json                     null,
     created_time timestamp                not null,
     updated_time timestamp                null
@@ -68,8 +68,8 @@ create index idx_exchange_created_time on exchange (`created_time`);
 create table config
 (
     id           bigint auto_increment primary key not null,
-    `group`      varchar(191)                      not null,
-    `key`        varchar(191)                      not null,
+    `group`      varchar(128)                      not null,
+    `key`        varchar(128)                      not null,
     `value`      text                              null,
     version      int     default 1                 not null,
     status       tinyint default 1                 not null comment '0:disabled 1:enabled',

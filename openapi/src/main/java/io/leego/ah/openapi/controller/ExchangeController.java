@@ -19,10 +19,10 @@ import org.springframework.web.client.HttpClientErrorException;
 @RestController
 @RequestMapping("exchanges")
 public class ExchangeController {
-    private final ExchangeService auctionService;
+    private final ExchangeService exchangeService;
 
-    public ExchangeController(ExchangeService auctionService) {
-        this.auctionService = auctionService;
+    public ExchangeController(ExchangeService exchangeService) {
+        this.exchangeService = exchangeService;
     }
 
     /**
@@ -33,7 +33,7 @@ public class ExchangeController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public void saveExchanges(@RequestBody ExchangeSaveDTO dto) {
-        auctionService.saveExchanges(dto);
+        exchangeService.saveExchanges(dto);
     }
 
     /**
@@ -46,7 +46,7 @@ public class ExchangeController {
     @GetMapping("latest")
     @ResponseStatus(HttpStatus.OK)
     public ExchangeVO getLatestExchange() {
-        return auctionService.getLatestExchange();
+        return exchangeService.getLatestExchange();
     }
 
 }

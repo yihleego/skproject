@@ -39,9 +39,22 @@ public class ConfigController {
     }
 
     /**
-     * Returns the config with the given key.
+     * Returns the configs with the given group.
      *
-     * @param key the config key.
+     * @param group the config group.
+     * @return the configs.
+     */
+    @GetMapping("{group}")
+    @ResponseStatus(HttpStatus.OK)
+    public List<ConfigVO> listConfigs(@PathVariable("group") String group) {
+        return configService.listConfigs(group);
+    }
+
+    /**
+     * Returns the config with the given group and key.
+     *
+     * @param group the config group.
+     * @param key   the config key.
      * @return the config.
      * @throws HttpClientErrorException.NotFound if the config is not found.
      */
@@ -52,9 +65,10 @@ public class ConfigController {
     }
 
     /**
-     * Returns the config version with the given key.
+     * Returns the config version with the given group and key.
      *
-     * @param key the config key.
+     * @param group the config group.
+     * @param key   the config key.
      * @return the config version.
      * @throws HttpClientErrorException.NotFound if the config is not found.
      */

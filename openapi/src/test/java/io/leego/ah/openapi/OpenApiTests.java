@@ -4,11 +4,16 @@ import io.leego.ah.openapi.constant.ItemGroup;
 import io.leego.ah.openapi.constant.VariantName;
 import io.leego.ah.openapi.constant.VariantValue;
 import io.leego.ah.openapi.dto.AuctionQueryDTO;
+import io.leego.ah.openapi.dto.ConfigQueryDTO;
 import io.leego.ah.openapi.dto.ItemQueryDTO;
 import io.leego.ah.openapi.service.AuctionService;
+import io.leego.ah.openapi.service.ConfigService;
+import io.leego.ah.openapi.service.ExchangeService;
 import io.leego.ah.openapi.service.ItemService;
 import io.leego.ah.openapi.util.Page;
 import io.leego.ah.openapi.vo.AuctionVO;
+import io.leego.ah.openapi.vo.ConfigVO;
+import io.leego.ah.openapi.vo.ExchangeVO;
 import io.leego.ah.openapi.vo.ItemVO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +37,10 @@ public class OpenApiTests {
     private AuctionService auctionService;
     @Autowired
     private ItemService itemService;
+    @Autowired
+    private ExchangeService exchangeService;
+    @Autowired
+    private ConfigService configService;
 
     @BeforeEach
     public void before() {
@@ -72,4 +81,35 @@ public class OpenApiTests {
             logger.info("{}", o);
         }
     }
+
+    @Test
+    public void testGetLatestExchange() {
+        ExchangeVO o = exchangeService.getLatestExchange();
+        logger.info("{}", o);
+    }
+
+    @Test
+    public void testListConfigs() {
+        ConfigQueryDTO dto = new ConfigQueryDTO();
+        dto.setGroup(List.of("auctionbot"));
+        List<ConfigVO> list = configService.listConfigs(dto);
+        for (ConfigVO o : list) {
+            logger.info("{}", o);
+        }
+    }
+
+    @Test
+    public void testListConfigsByGroup() {
+        List<ConfigVO> list = configService.listConfigs("auctionbot");
+        for (ConfigVO o : list) {
+            logger.info("{}", o);
+        }
+    }
+
+    @Test
+    public void testGetConfig() {
+        ConfigVO o = configService.getConfig("auctionbot", "autobid");
+        logger.info("{}", o);
+    }
+
 }

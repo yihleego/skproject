@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConfigVO {
-    private Long id;
     private String group;
     private String key;
     private String value;

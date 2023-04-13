@@ -12,6 +12,8 @@ public interface ConfigService {
 
     List<ConfigVO> listConfigs(ConfigQueryDTO dto);
 
+    List<ConfigVO> listConfigs(String group);
+
     ConfigVO getConfig(String group, String key);
 
     Integer getConfigVersion(String group, String key);

@@ -31,6 +31,11 @@ public class ConfigServiceImpl extends BaseServiceImpl implements ConfigService 
     }
 
     @Override
+    public List<ConfigVO> listConfigs(String group) {
+        return configRepository.findByGroup(group).stream().map(this::toVO).toList();
+    }
+
+    @Override
     public ConfigVO getConfig(String group, String key) {
         return configRepository.findByGroupAndKey(group, key).map(this::toVO)
                 .orElseThrow(() -> new HttpClientErrorException(HttpStatus.NOT_FOUND));
@@ -44,7 +49,6 @@ public class ConfigServiceImpl extends BaseServiceImpl implements ConfigService 
 
     private ConfigVO toVO(Config config) {
         return new ConfigVO(
-                config.getId(),
                 config.getGroup(),
                 config.getKey(),
                 config.getValue(),

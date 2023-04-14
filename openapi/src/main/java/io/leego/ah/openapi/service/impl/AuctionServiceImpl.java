@@ -28,7 +28,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -39,7 +38,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Leego Yih
@@ -47,16 +45,16 @@ import java.util.stream.Stream;
 @Service
 public class AuctionServiceImpl extends BaseServiceImpl implements AuctionService {
     private static final Logger logger = LoggerFactory.getLogger(AuctionServiceImpl.class);
-    private final ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher publisher;
     private final AuctionRepository auctionRepository;
     private final AuctionLogRepository auctionLogRepository;
     private final ItemRepository itemRepository;
     private final ExecutorService executorService;
 
-    public AuctionServiceImpl(ObjectMapper objectMapper, ApplicationEventPublisher eventPublisher,
+    public AuctionServiceImpl(ObjectMapper objectMapper, ApplicationEventPublisher publisher,
                               AuctionRepository auctionRepository, AuctionLogRepository auctionLogRepository, ItemRepository itemRepository) {
         super(objectMapper);
-        this.eventPublisher = eventPublisher;
+        this.publisher = publisher;
         this.auctionRepository = auctionRepository;
         this.auctionLogRepository = auctionLogRepository;
         this.itemRepository = itemRepository;
@@ -78,11 +76,19 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
 
     private void saveAuctionsAsync(AuctionDTO[] all, AuctionDTO[] ended) {
         // Collect all ids
-        List<Long> ids = Stream.of(Arrays.stream(all), Arrays.stream(ended).filter(o -> Objects.equals(o.getTimeLeft(), TimeLeft.ENDED.getCode())))
-                .flatMap(o -> o)
-                .peek(this::trimAuction)
-                .map(AuctionDTO::getId)
-                .toList();
+        List<Long> ids = new ArrayList<>(all.length + ended.length);
+        for (AuctionDTO o : all) {
+            trimAuction(o);
+            ids.add(o.getId());
+        }
+        for (AuctionDTO o : ended) {
+            // Filter out the auctions that have ended
+            if (!Objects.equals(o.getTimeLeft(), TimeLeft.ENDED.getCode())) {
+                continue;
+            }
+            trimAuction(o);
+            ids.add(o.getId());
+        }
 
         // Find the auctions that exist in the database but do not exist in the given ids,
         // which means they are ended. (someone bought it or the time is up)
@@ -101,7 +107,6 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         List<Long> skips = new ArrayList<>(ids.size());
         Set<Long> dupes = new HashSet<>();
         List<AuctionLog> logs = new ArrayList<>();
-        List<AuctionLog> xlogs = new ArrayList<>();
 
         for (AuctionDTO dto : ended) {
             Auction old = oldMap.get(dto.getId());
@@ -133,25 +138,58 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
             }
             List<Auction> list = old == null ? creates : updates;
             list.add(buildAuction(dto, old, now, false));
-            if (isStatusChanged(dto, old)) {
-                logs.add(buildAuctionLog(dto, now));
-            } else {
-                xlogs.add(buildAuctionLog(dto, now));
-            }
+            logs.add(buildAuctionLog(dto, now));
         }
 
         // End the auctions
-        if (!ends.isEmpty()) {endAuctions(ends);}
+        if (!ends.isEmpty()) {
+            long begin = System.currentTimeMillis();
+            List<Long> endIds = ends.stream().map(Auction::getId).toList();
+            int count = auctionRepository.updateLeftTime(endIds, TimeLeft.ENDED.getCode(), Instant.now());
+            long end = System.currentTimeMillis();
+            if (ends.size() == count) {
+                logger.info("Ended auctions({}) in {} ms", count, end - begin);
+            } else {
+                logger.warn("Ended auctions({}->{}) in {} ms", ends.size(), count, end - begin);
+            }
+        }
         // Create new auctions
-        if (!creates.isEmpty()) {createAuctions(creates);}
+        if (!creates.isEmpty()) {
+            long begin = System.currentTimeMillis();
+            auctionRepository.saveAllAndFlush(creates);
+            long end = System.currentTimeMillis();
+            logger.info("Created auctions({}) in {} ms", creates.size(), end - begin);
+        }
         // Update the auctions
-        if (!updates.isEmpty()) {updateAuctions(updates);}
+        if (!updates.isEmpty()) {
+            long begin = System.currentTimeMillis();
+            auctionRepository.saveAllAndFlush(updates);
+            long end = System.currentTimeMillis();
+            logger.info("Updated auctions({}) in {} ms", updates.size(), end - begin);
+        }
         // Update time only if the auctions haven't changed
-        if (!skips.isEmpty()) {skipAuctions(skips);}
+        if (!skips.isEmpty()) {
+            long begin = System.currentTimeMillis();
+            int count = auctionRepository.updateUpdatedTime(skips, Instant.now());
+            long end = System.currentTimeMillis();
+            if (skips.size() == count) {
+                logger.info("Skipped auctions({}) in {} ms", count, end - begin);
+            } else {
+                logger.warn("Skipped auctions({}->{}) in {} ms", skips.size(), count, end - begin);
+            }
+        }
         // Create logs
-        if (!logs.isEmpty()) {createAuctionLogs(logs);}
-        // Sync logs
-        syncAuctionLogs(logs, xlogs);
+        if (!logs.isEmpty()) {
+            long begin = System.currentTimeMillis();
+            auctionLogRepository.saveAll(logs);
+            long end = System.currentTimeMillis();
+            logger.info("Created auction logs({}) in {} ms", logs.size(), end - begin);
+        }
+        // Sync data
+        publisher.publishEvent(DataSyncEvent.update(ends, "end auction"));
+        publisher.publishEvent(DataSyncEvent.create(creates, "create auction"));
+        publisher.publishEvent(DataSyncEvent.update(updates, "update auction"));
+        publisher.publishEvent(DataSyncEvent.create(logs, "create auction log"));
         // Clear
         dupes.clear();
     }
@@ -219,62 +257,6 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
                 || !Objects.equals(old.getTimeLeft(), dto.getTimeLeft());
     }
 
-    private void createAuctions(List<Auction> list) {
-        long begin = System.currentTimeMillis();
-        auctionRepository.saveAllAndFlush(list);
-        long end = System.currentTimeMillis();
-        logger.info("Created auctions({}) in {} ms", list.size(), end - begin);
-        eventPublisher.publishEvent(DataSyncEvent.insert(list, "create auction"));
-    }
-
-    private void updateAuctions(List<Auction> list) {
-        long begin = System.currentTimeMillis();
-        auctionRepository.saveAllAndFlush(list);
-        long end = System.currentTimeMillis();
-        logger.info("Updated auctions({}) in {} ms", list.size(), end - begin);
-        eventPublisher.publishEvent(DataSyncEvent.update(list, "update auction"));
-    }
-
-    private void endAuctions(List<Auction> list) {
-        long begin = System.currentTimeMillis();
-        List<Long> ids = list.stream().map(Auction::getId).toList();
-        int count = auctionRepository.updateLeftTime(ids, TimeLeft.ENDED.getCode(), Instant.now());
-        long end = System.currentTimeMillis();
-        if (list.size() == count) {
-            logger.info("Ended auctions({}) in {} ms", count, end - begin);
-        } else {
-            logger.warn("Ended auctions({}->{}) in {} ms", list.size(), count, end - begin);
-        }
-        eventPublisher.publishEvent(DataSyncEvent.update(list, "end auction"));
-    }
-
-    private void skipAuctions(List<Long> list) {
-        long begin = System.currentTimeMillis();
-        int count = auctionRepository.updateUpdatedTime(list, Instant.now());
-        long end = System.currentTimeMillis();
-        if (list.size() == count) {
-            logger.info("Skipped auctions({}) in {} ms", count, end - begin);
-        } else {
-            logger.warn("Skipped auctions({}->{}) in {} ms", list.size(), count, end - begin);
-        }
-    }
-
-    private void createAuctionLogs(List<AuctionLog> list) {
-        long begin = System.currentTimeMillis();
-        auctionLogRepository.saveAll(list);
-        long end = System.currentTimeMillis();
-        logger.info("Created auction logs({}) in {} ms", list.size(), end - begin);
-    }
-
-    private void syncAuctionLogs(List<AuctionLog> logs, List<AuctionLog> xlogs) {
-        if (!logs.isEmpty()) {
-            eventPublisher.publishEvent(DataSyncEvent.insert(logs, "create auction log"));
-        }
-        if (!xlogs.isEmpty()) {
-            eventPublisher.publishEvent(DataSyncEvent.insert(xlogs, "create auction log(x)"));
-        }
-    }
-
     private static final List<String> NONE_ENDED = List.of(
             TimeLeft.VERY_SHORT.getCode(),
             TimeLeft.SHORT.getCode(),
@@ -305,7 +287,6 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         itemIds.addAll(accessories.stream().map(AccessoryVO::getId).toList());
         Map<String, Item> itemMap = itemRepository.findAllById(itemIds).stream()
                 .collect(Collectors.toMap(Item::getId, Function.identity()));
-        // Fill items
         for (ItemVO vo : items) {
             Item item = itemMap.get(vo.getId());
             if (item != null) {
@@ -313,7 +294,6 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
                 vo.setColorization(readValue(item.getColorization(), ColorizationVO[].class));
             }
         }
-        // Fill accessories
         for (AccessoryVO vo : accessories) {
             Item accessory = itemMap.get(vo.getId());
             if (accessory != null) {

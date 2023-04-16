@@ -2,6 +2,7 @@ package io.leego.ah.openapi.datasync;
 
 import io.leego.ah.openapi.config.DataSyncProperties;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -15,7 +16,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
@@ -48,15 +48,16 @@ public class DataSyncEventListener implements ApplicationListener<DataSyncEvent>
                             .properties(properties)
                             .build();
                     factoryBean.afterPropertiesSet();
-                    return new Sync(o.getKey(),
-                            Objects.requireNonNull(factoryBean.getObject()).createEntityManager(),
-                            Executors.newSingleThreadExecutor());
+                    return new Sync(o.getKey(), Executors.newSingleThreadExecutor(), factoryBean.getObject());
                 })
                 .toList();
     }
 
     @Override
     public void onApplicationEvent(DataSyncEvent event) {
+        if (syncs.isEmpty()) {
+            return;
+        }
         var type = event.getType();
         var tag = event.getTag();
         var source = event.getSource();
@@ -85,22 +86,18 @@ public class DataSyncEventListener implements ApplicationListener<DataSyncEvent>
     }
 
     private void execute(Collection<?> entities, String tag, BiConsumer<EntityManager, Object> exec) {
-        if (syncs.isEmpty()) {
-            return;
-        }
         for (var sync : syncs) {
-            var name = sync.name;
-            var entityManager = sync.entityManager;
-            var executorService = sync.executorService;
-            executorService.execute(() -> {
+            sync.getExecutorService().execute(() -> {
                 var begin = System.currentTimeMillis();
-                var tx = entityManager.getTransaction();
-                tx.begin();
+                var name = sync.getName();
+                var em = sync.getEntityManager();
+                var tx = em.getTransaction();
                 try {
+                    tx.begin();
                     for (Object entity : entities) {
-                        exec.accept(entityManager, entity);
+                        exec.accept(em, entity);
                     }
-                    entityManager.flush();
+                    em.flush();
                     tx.commit();
                     var end = System.currentTimeMillis();
                     logger.info("Synced data({}) to {} in {} ms ({})", entities.size(), name, end - begin, tag);
@@ -114,5 +111,36 @@ public class DataSyncEventListener implements ApplicationListener<DataSyncEvent>
         }
     }
 
-    record Sync(String name, EntityManager entityManager, ExecutorService executorService) {}
+    static final class Sync {
+        private final String name;
+        private final ExecutorService executorService;
+        private final EntityManagerFactory entityManagerFactory;
+        private EntityManager entityManagerBean;
+
+        public Sync(String name, ExecutorService executorService, EntityManagerFactory entityManagerFactory) {
+            this.name = name;
+            this.executorService = executorService;
+            this.entityManagerFactory = entityManagerFactory;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public ExecutorService getExecutorService() {
+            return executorService;
+        }
+
+        public EntityManager getEntityManager() {
+            if (entityManagerBean != null && entityManagerBean.isOpen()) {
+                return entityManagerBean;
+            }
+            synchronized (this) {
+                if (entityManagerBean != null && entityManagerBean.isOpen()) {
+                    return entityManagerBean;
+                }
+                return entityManagerBean = entityManagerFactory.createEntityManager();
+            }
+        }
+    }
 }

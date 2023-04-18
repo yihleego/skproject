@@ -92,8 +92,6 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         // which means they are ended. (someone bought it or the time is up)
         // There is no guarantee that these final bid prices will be accurate.
         List<Auction> ends = auctionRepository.findByIdNotInAndTimeLeftIn(ids, NONE_ENDED);
-        // Mark the auctions as ended
-        ends.forEach(o -> o.setTimeLeft(TimeLeft.ENDED.getCode()));
 
         // Find all auctions with the given ids
         Map<Long, Auction> oldMap = auctionRepository.findAllById(ids)
@@ -106,6 +104,13 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         Set<Long> dupes = new HashSet<>();
         List<AuctionLog> logs = new ArrayList<>();
 
+        // Mark the auctions as ended (NOT from my bids)
+        for (Auction o : ends) {
+            o.setTimeLeft(TimeLeft.ENDED.getCode());
+            logs.add(buildAuctionLog(o, now));
+        }
+
+        // Update the auctions as ended (from my bids)
         for (AuctionDTO dto : ended) {
             Auction old = oldMap.get(dto.getId());
             // Skip if the auction does not change
@@ -117,9 +122,13 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
                 logger.warn("Duplicate auction from ended: {}", dto);
                 continue;
             }
-            List<Auction> list = old == null ? creates : updates;
-            list.add(buildAuction(dto, old, now, true));
-            logs.add(buildAuctionLog(dto, now));
+            Auction cur = buildAuction(dto, old, now, true);
+            if (old == null) {
+                creates.add(cur);
+            } else {
+                updates.add(cur);
+            }
+            logs.add(buildAuctionLog(cur, now));
         }
 
         for (AuctionDTO dto : all) {
@@ -134,9 +143,13 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
                 logger.warn("Duplicate auction from all: {}", dto);
                 continue;
             }
-            List<Auction> list = old == null ? creates : updates;
-            list.add(buildAuction(dto, old, now, false));
-            logs.add(buildAuctionLog(dto, now));
+            Auction cur = buildAuction(dto, old, now, false);
+            if (old == null) {
+                creates.add(cur);
+            } else {
+                updates.add(cur);
+            }
+            logs.add(buildAuctionLog(cur, now));
         }
 
         // End the auctions
@@ -233,8 +246,8 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         return cur;
     }
 
-    private AuctionLog buildAuctionLog(AuctionDTO dto, Instant now) {
-        return new AuctionLog(null, dto.getId(), dto.getBidPrice(), dto.getBidStatus(), dto.getTimeLeft(), now);
+    private AuctionLog buildAuctionLog(Auction o, Instant now) {
+        return new AuctionLog(null, o.getId(), o.getBidPrice(), o.getBidStatus(), o.getTimeLeft(), now);
     }
 
     /** Returns true if there is any change with {@code bidPrice}, {@code bidStatus}, {@code timeLeft} or {@code remaining}. */

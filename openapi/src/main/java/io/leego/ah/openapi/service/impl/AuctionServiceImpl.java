@@ -3,7 +3,6 @@ package io.leego.ah.openapi.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leego.ah.openapi.constant.BidStatus;
 import io.leego.ah.openapi.constant.TimeLeft;
-import io.leego.ah.openapi.datasync.DataSyncEvent;
 import io.leego.ah.openapi.dto.AuctionDTO;
 import io.leego.ah.openapi.dto.AuctionQueryDTO;
 import io.leego.ah.openapi.dto.AuctionSaveDTO;
@@ -14,6 +13,7 @@ import io.leego.ah.openapi.repository.AuctionLogRepository;
 import io.leego.ah.openapi.repository.AuctionRepository;
 import io.leego.ah.openapi.repository.ItemRepository;
 import io.leego.ah.openapi.service.AuctionService;
+import io.leego.ah.openapi.service.DataSyncService;
 import io.leego.ah.openapi.util.Page;
 import io.leego.ah.openapi.vo.AccessoryVO;
 import io.leego.ah.openapi.vo.AuctionVO;
@@ -23,7 +23,6 @@ import io.leego.ah.openapi.vo.VariantVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -45,19 +44,18 @@ import java.util.stream.Collectors;
 @Service
 public class AuctionServiceImpl extends BaseServiceImpl implements AuctionService {
     private static final Logger logger = LoggerFactory.getLogger(AuctionServiceImpl.class);
-    private final ApplicationEventPublisher publisher;
     private final AuctionRepository auctionRepository;
     private final AuctionLogRepository auctionLogRepository;
     private final ItemRepository itemRepository;
+    private final DataSyncService dataSyncService;
     private final ExecutorService executorService;
 
-    public AuctionServiceImpl(ObjectMapper objectMapper, ApplicationEventPublisher publisher,
-                              AuctionRepository auctionRepository, AuctionLogRepository auctionLogRepository, ItemRepository itemRepository) {
+    public AuctionServiceImpl(ObjectMapper objectMapper, AuctionRepository auctionRepository, AuctionLogRepository auctionLogRepository, ItemRepository itemRepository, DataSyncService dataSyncService) {
         super(objectMapper);
-        this.publisher = publisher;
         this.auctionRepository = auctionRepository;
         this.auctionLogRepository = auctionLogRepository;
         this.itemRepository = itemRepository;
+        this.dataSyncService = dataSyncService;
         this.executorService = Executors.newSingleThreadExecutor();
     }
 
@@ -186,10 +184,10 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
             logger.info("Created auction logs({}) in {} ms", logs.size(), end - begin);
         }
         // Sync data
-        publisher.publishEvent(DataSyncEvent.update(ends, "end auction"));
-        publisher.publishEvent(DataSyncEvent.create(creates, "create auction"));
-        publisher.publishEvent(DataSyncEvent.update(updates, "update auction"));
-        publisher.publishEvent(DataSyncEvent.create(logs, "create auction log"));
+        dataSyncService.update(ends, "end auction");
+        dataSyncService.create(creates, "create auction");
+        dataSyncService.update(updates, "update auction");
+        dataSyncService.create(logs, "create auction log");
         // Clear
         dupes.clear();
     }

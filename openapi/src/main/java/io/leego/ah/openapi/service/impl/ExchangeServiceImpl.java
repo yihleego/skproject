@@ -1,16 +1,15 @@
 package io.leego.ah.openapi.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.leego.ah.openapi.datasync.DataSyncEvent;
 import io.leego.ah.openapi.dto.ExchangeSaveDTO;
 import io.leego.ah.openapi.entity.Exchange;
 import io.leego.ah.openapi.repository.ExchangeRepository;
+import io.leego.ah.openapi.service.DataSyncService;
 import io.leego.ah.openapi.service.ExchangeService;
 import io.leego.ah.openapi.vo.ExchangeVO;
 import io.leego.ah.openapi.vo.OfferVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -24,14 +23,13 @@ import java.util.List;
 @Service
 public class ExchangeServiceImpl extends BaseServiceImpl implements ExchangeService {
     private static final Logger logger = LoggerFactory.getLogger(ExchangeServiceImpl.class);
-    private final ApplicationEventPublisher publisher;
     private final ExchangeRepository exchangeRepository;
+    private final DataSyncService dataSyncService;
 
-    public ExchangeServiceImpl(ObjectMapper objectMapper, ApplicationEventPublisher publisher,
-                               ExchangeRepository exchangeRepository) {
+    public ExchangeServiceImpl(ObjectMapper objectMapper, ExchangeRepository exchangeRepository, DataSyncService dataSyncService) {
         super(objectMapper);
-        this.publisher = publisher;
         this.exchangeRepository = exchangeRepository;
+        this.dataSyncService = dataSyncService;
     }
 
     @Override
@@ -45,7 +43,7 @@ public class ExchangeServiceImpl extends BaseServiceImpl implements ExchangeServ
         exchangeRepository.save(exchange);
         long end = System.currentTimeMillis();
         logger.info("Created exchange in {} ms", end - begin);
-        publisher.publishEvent(DataSyncEvent.create(List.of(exchange), "create exchange"));
+        dataSyncService.create(List.of(exchange), "create exchange");
     }
 
     @Override

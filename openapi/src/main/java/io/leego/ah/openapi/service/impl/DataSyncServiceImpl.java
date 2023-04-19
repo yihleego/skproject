@@ -82,15 +82,15 @@ public class DataSyncServiceImpl implements DataSyncService {
         if (CollectionUtils.isEmpty(dto.getType())) {
             dto.setType(List.of(TYPE_AUCTION, TYPE_AUCTION_LOG, TYPE_EXCHANGE));
         }
-        for (Integer type : dto.getType()) {
+        for (var type : dto.getType()) {
             if (type == TYPE_AUCTION) {
-                QPredicate predicate = QPredicate.create().and(QAuction.auction.updatedTime::between, dto.getBeginTime(), dto.getEndTime());
+                var predicate = QPredicate.create().and(QAuction.auction.updatedTime::between, dto.getBeginTime(), dto.getEndTime());
                 syncData(predicate, auctionRepository, "sync auction");
             } else if (type == TYPE_AUCTION_LOG) {
-                QPredicate predicate = QPredicate.create().and(QAuctionLog.auctionLog.createdTime::between, dto.getBeginTime(), dto.getEndTime());
+                var predicate = QPredicate.create().and(QAuctionLog.auctionLog.createdTime::between, dto.getBeginTime(), dto.getEndTime());
                 syncData(predicate, auctionLogRepository, "sync auction log");
             } else if (type == TYPE_EXCHANGE) {
-                QPredicate predicate = QPredicate.create().and(QExchange.exchange.createdTime::between, dto.getBeginTime(), dto.getEndTime());
+                var predicate = QPredicate.create().and(QExchange.exchange.createdTime::between, dto.getBeginTime(), dto.getEndTime());
                 syncData(predicate, exchangeRepository, "sync exchange");
             }
         }
@@ -100,9 +100,14 @@ public class DataSyncServiceImpl implements DataSyncService {
         if (predicate == null || predicate.isEmpty()) {
             return;
         }
-        List<?> entities = (List<?>) repo.findAll(predicate, Sort.by(Sort.Direction.DESC, "id"));
+        var entities = (List<?>) repo.findAll(predicate, Sort.by(Sort.Direction.DESC, "id"));
         if (!entities.isEmpty()) {
-            partition(entities, 50).forEach(list -> update(list, tag));
+            var size = 50;
+            var parts = partition(entities, size);
+            for (var i = 0; i < parts.size(); i++) {
+                var sub = parts.get(i);
+                update(sub, "%s %d/%d".formatted(tag, (i * size + sub.size()), entities.size()));
+            }
         }
     }
 

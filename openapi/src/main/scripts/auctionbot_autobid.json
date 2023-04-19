@@ -1,0 +1,474 @@
+{
+  "fallback": {
+    "buyPrice": 0,
+    "bidPrice": 11
+  },
+  "items": [
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Shard",
+          "operation": "endsWith"
+        }
+      ],
+      "buyPrice": 0,
+      "bidPrice": 0
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Sprite/",
+          "operation": "startsWith"
+        }
+      ],
+      "buyPrice": 50000,
+      "bidPrice": 11
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Upgrade/Lockboxes/Character",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 400000,
+      "bidPrice": 100000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Overcharged Mixmaster",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 1000000,
+      "bidPrice": 100000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Celestial Orbitgun",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 1000000,
+      "bidPrice": 100000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Gear/Trinket/Somnambulist's Totem",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 1000000,
+      "bidPrice": 100000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Caladbolg",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 1000000,
+      "bidPrice": 100000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Spiral Soaker",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 1000000,
+      "bidPrice": 100000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Brandish",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Acheron",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Combuster",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Glacius",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 300000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Ice Axe",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Caladbolg",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Obsidian Edge",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Voltedge",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Divine Avenger",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "ATTACK_SPEED_INCREASED",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 300000,
+      "bidPrice": 30000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Sword/Gran Faust",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "ATTACK_SPEED_INCREASED",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 300000,
+      "bidPrice": 30000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Bomb/Electron Vortex",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Bomb/Celestial Vortex",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Bomb/Graviton Vortex",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Autogun",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Blitz Needle",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "CHARGE_TIME_REDUCTION",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 500000,
+      "bidPrice": 50000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Blaster",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "ATTACK_SPEED_INCREASED",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 300000,
+      "bidPrice": 30000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Winter Grave",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "ATTACK_SPEED_INCREASED",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 300000,
+      "bidPrice": 30000
+    },
+    {
+      "rules": [
+        {
+          "key": "itemId",
+          "value": "Weapon/Handgun/Arcana",
+          "operation": "equals"
+        },
+        {
+          "key": "variantName",
+          "value": "ATTACK_SPEED_INCREASED",
+          "operation": "equals"
+        },
+        {
+          "key": "variantValue",
+          "value": "VERY_HIGH",
+          "operation": "equals"
+        }
+      ],
+      "buyPrice": 300000,
+      "bidPrice": 30000
+    }
+  ]
+}

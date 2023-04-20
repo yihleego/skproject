@@ -66,9 +66,9 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         // Auctions `ended` come from `my bids`, which means that the final bid prices are accurate.
         final AuctionDTO[] ended = dto.getEnded();
         executorService.execute(() -> {
-            logger.info("[ALL] Saving auctions(all={}, ended={})", all.length, ended.length);
+            logger.info("Saving auctions(all={}, ended={})", all.length, ended.length);
             saveAuctionsAsync(all, ended);
-            logger.info("[ALL] Saved auctions(all={}, ended={})", all.length, ended.length);
+            logger.info("Saved auctions(all={}, ended={})", all.length, ended.length);
         });
     }
 

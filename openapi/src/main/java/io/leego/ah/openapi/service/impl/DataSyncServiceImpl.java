@@ -13,6 +13,7 @@ import io.leego.ah.openapi.service.DataSyncService;
 import io.leego.ah.openapi.util.QPredicate;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -28,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
@@ -45,36 +47,23 @@ public class DataSyncServiceImpl implements DataSyncService {
     private final AuctionRepository auctionRepository;
     private final AuctionLogRepository auctionLogRepository;
     private final ExchangeRepository exchangeRepository;
-    private final List<Sync> syncs;
+    private final EntityManager entityManager;
+    private final EntityManagerFactoryBuilder entityManagerFactoryBuilder;
+    private final Map<String, Sync> syncs;
 
     public DataSyncServiceImpl(AuctionRepository auctionRepository, AuctionLogRepository auctionLogRepository, ExchangeRepository exchangeRepository,
-                               EntityManager entityManager, EntityManagerFactoryBuilder builder, DataSyncProperties dataSyncProperties) {
+                               EntityManager entityManager, EntityManagerFactoryBuilder entityManagerFactoryBuilder, DataSyncProperties dataSyncProperties) {
         this.auctionRepository = auctionRepository;
         this.auctionLogRepository = auctionLogRepository;
         this.exchangeRepository = exchangeRepository;
-        this.syncs = dataSyncProperties.getDatasource().entrySet()
-                .stream()
-                .map(o -> {
-                    DataSource dataSource = DataSourceBuilder.create()
-                            .driverClassName(o.getValue().getDriverClassName())
-                            .url(o.getValue().getUrl())
-                            .username(o.getValue().getUsername())
-                            .password(o.getValue().getPassword())
-                            .build();
-                    Map<String, Object> properties = new HashMap<>(entityManager.getEntityManagerFactory().getProperties());
-                    properties.put("jakarta.persistence.nonJtaDataSource", dataSource);
-                    properties.put("javax.persistence.nonJtaDataSource", dataSource);
-                    properties.put("hibernate.connection.datasource", dataSource);
-                    LocalContainerEntityManagerFactoryBean factoryBean = builder
-                            .dataSource(dataSource)
-                            .packages("io.leego.ah.openapi.entity")
-                            .persistenceUnit(o.getKey())
-                            .properties(properties)
-                            .build();
-                    factoryBean.afterPropertiesSet();
-                    return new Sync(o.getKey(), Executors.newSingleThreadExecutor(), factoryBean.getObject());
-                })
-                .toList();
+        this.entityManager = entityManager;
+        this.entityManagerFactoryBuilder = entityManagerFactoryBuilder;
+        this.syncs = new ConcurrentHashMap<>();
+        for (Map.Entry<String, DataSyncProperties.DataSource> entry : dataSyncProperties.getDatasource().entrySet()) {
+            String name = entry.getKey();
+            DataSyncProperties.DataSource config = entry.getValue();
+            syncs.put(name, newSync(name, config));
+        }
     }
 
     @Override
@@ -130,29 +119,66 @@ public class DataSyncServiceImpl implements DataSyncService {
         if (CollectionUtils.isEmpty(entities)) {
             return;
         }
-        for (var sync : syncs) {
+        for (var sync : syncs.values()) {
+            var name = sync.getName();
+            var size = entities.size();
+            logger.info("Syncing data({}) to {} ({})", size, name, tag);
             sync.getExecutorService().execute(() -> {
-                var begin = System.currentTimeMillis();
-                var name = sync.getName();
-                var em = sync.getEntityManager();
-                var tx = em.getTransaction();
-                try {
-                    tx.begin();
-                    for (Object entity : entities) {
-                        exec.accept(em, entity);
+                boolean ok = false;
+                while (!ok) {
+                    var begin = System.currentTimeMillis();
+                    var em = sync.getEntityManager();
+                    var tx = em.getTransaction();
+                    try {
+                        tx.begin();
+                        for (Object entity : entities) {
+                            exec.accept(em, entity);
+                        }
+                        em.flush();
+                        tx.commit();
+                        var end = System.currentTimeMillis();
+                        logger.info("Synced data({}) to {} in {} ms ({})", size, name, end - begin, tag);
+                        ok = true;
+                    } catch (Exception e) {
+                        logger.error("Failed to sync data({}) to {} ({})", size, name, tag, e);
+                        if (tx.isActive()) {
+                            tx.rollback();
+                        }
+                        em.close();
+                        try {
+                            sync.reset();
+                        } catch (Exception e2) {
+                            logger.error("Failed to reset datasource({})", name);
+                        }
                     }
-                    em.flush();
-                    tx.commit();
-                    var end = System.currentTimeMillis();
-                    logger.info("Synced data({}) to {} in {} ms ({})", entities.size(), name, end - begin, tag);
-                } catch (Exception e) {
-                    if (tx.isActive()) {
-                        tx.rollback();
-                    }
-                    logger.error("Failed to sync data({}) to {} ({})", entities.size(), name, tag, e);
                 }
             });
         }
+    }
+
+    private Sync newSync(String name, DataSyncProperties.DataSource config) {
+        return new Sync(name, config, Executors.newSingleThreadExecutor(), newEntityManagerFactory(name, config));
+    }
+
+    private EntityManagerFactory newEntityManagerFactory(String name, DataSyncProperties.DataSource config) {
+        DataSource dataSource = DataSourceBuilder.create()
+                .driverClassName(config.getDriverClassName())
+                .url(config.getUrl())
+                .username(config.getUsername())
+                .password(config.getPassword())
+                .build();
+        Map<String, Object> properties = new HashMap<>(entityManager.getEntityManagerFactory().getProperties());
+        properties.put("jakarta.persistence.nonJtaDataSource", dataSource);
+        properties.put("javax.persistence.nonJtaDataSource", dataSource);
+        properties.put("hibernate.connection.datasource", dataSource);
+        LocalContainerEntityManagerFactoryBean factoryBean = entityManagerFactoryBuilder
+                .dataSource(dataSource)
+                .packages("io.leego.ah.openapi.entity")
+                .persistenceUnit(name)
+                .properties(properties)
+                .build();
+        factoryBean.afterPropertiesSet();
+        return factoryBean.getObject();
     }
 
     private <E> List<List<E>> partition(final List<E> source, final int size) {
@@ -171,24 +197,24 @@ public class DataSyncServiceImpl implements DataSyncService {
                 .toList();
     }
 
-    static final class Sync {
+    @Data
+    final class Sync {
         private final String name;
+        private final DataSyncProperties.DataSource config;
         private final ExecutorService executorService;
-        private final EntityManagerFactory entityManagerFactory;
+        private EntityManagerFactory entityManagerFactory;
         private EntityManager entityManagerBean;
 
-        public Sync(String name, ExecutorService executorService, EntityManagerFactory entityManagerFactory) {
+        public Sync(String name, DataSyncProperties.DataSource config, ExecutorService executorService, EntityManagerFactory entityManagerFactory) {
             this.name = name;
+            this.config = config;
             this.executorService = executorService;
             this.entityManagerFactory = entityManagerFactory;
         }
 
-        public String getName() {
-            return name;
-        }
-
-        public ExecutorService getExecutorService() {
-            return executorService;
+        public void reset() {
+            this.entityManagerFactory = newEntityManagerFactory(this.name, this.config);
+            this.entityManagerBean = null;
         }
 
         public EntityManager getEntityManager() {

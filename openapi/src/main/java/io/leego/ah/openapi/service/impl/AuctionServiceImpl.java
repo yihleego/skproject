@@ -238,9 +238,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
             } else if (!cur.getTimeLeft().equals(old.getTimeLeft())) {
                 // Recalculate the `estimatedEndTime` if the `timeLeft` changed
                 Instant newEstimatedEndTime = now.plus(timeLeft.getDuration(cur.getFeatured()));
-                if (newEstimatedEndTime.isBefore(old.getEstimatedEndTime())) {
-                    cur.setEstimatedEndTime(newEstimatedEndTime);
-                }
+                cur.setEstimatedEndTime(newEstimatedEndTime);
             }
         }
         return cur;

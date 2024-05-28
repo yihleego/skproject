@@ -1,5 +1,7 @@
 package io.leego.ah.openapi.service.impl;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import io.leego.ah.openapi.entity.Auction;
 import io.leego.ah.openapi.entity.AuctionLog;
 import io.leego.ah.openapi.entity.Item;
@@ -24,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -271,6 +274,13 @@ public class AuctionServiceImpl implements AuctionService {
             TimeLeft.LONG.getCode(),
             TimeLeft.VERY_LONG.getCode());
 
+    private final Cache<String, Item> itemCache = CacheBuilder.newBuilder()
+            .concurrencyLevel(Runtime.getRuntime().availableProcessors())
+            .initialCapacity(1 << 10)
+            .maximumSize(1 << 13)
+            .expireAfterAccess(Duration.ofMinutes(10))
+            .build();
+
     @Override
     public Page<AuctionVO> listAuctions(AuctionQueryDTO dto) {
         Page<Auction> page = auctionRepository.findAll(dto.toPredicate(), dto);
@@ -292,8 +302,7 @@ public class AuctionServiceImpl implements AuctionService {
         List<String> itemIds = new ArrayList<>(items.size() + accessories.size());
         itemIds.addAll(items.stream().map(ItemVO::getId).toList());
         itemIds.addAll(accessories.stream().map(AccessoryVO::getId).toList());
-        Map<String, Item> itemMap = itemRepository.findAllById(itemIds)
-                .stream().collect(Collectors.toMap(Item::getId, Function.identity()));
+        Map<String, Item> itemMap = getItemMap(itemIds);
         for (ItemVO vo : items) {
             Item item = itemMap.get(vo.getId());
             if (item != null) {
@@ -309,5 +318,35 @@ public class AuctionServiceImpl implements AuctionService {
             }
         }
         return newPage;
+    }
+
+    private Map<String, Item> getItemMap(List<String> itemIds) {
+        // Remove duplicate item IDs
+        itemIds = itemIds.stream().distinct().collect(Collectors.toList());
+        // Find items from the cache
+        List<Item> cacheItems = itemIds.stream()
+                .map(itemCache::getIfPresent)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        // Try querying from the database if there is any item that missed the cache
+        if (cacheItems.size() != itemIds.size()) {
+            // Find the missing item IDs
+            List<String> queryItemIds;
+            if (!cacheItems.isEmpty()) {
+                Set<String> cacheItemIds = cacheItems.stream().map(Item::getId).collect(Collectors.toSet());
+                queryItemIds = itemIds.stream().filter(id -> !cacheItemIds.contains(id)).collect(Collectors.toList());
+            } else {
+                queryItemIds = itemIds;
+            }
+            // Query from the database
+            if (!queryItemIds.isEmpty()) {
+                List<Item> remainingItems = itemRepository.findAllById(queryItemIds);
+                if (!remainingItems.isEmpty()) {
+                    remainingItems.forEach(o -> itemCache.put(o.getId(), o));
+                    cacheItems.addAll(remainingItems);
+                }
+            }
+        }
+        return cacheItems.stream().collect(Collectors.toMap(Item::getId, Function.identity(), (oldValue, newValue) -> newValue));
     }
 }

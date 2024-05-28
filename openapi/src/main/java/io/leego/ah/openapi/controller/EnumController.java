@@ -1,13 +1,13 @@
 package io.leego.ah.openapi.controller;
 
 import io.leego.ah.openapi.annotation.Privileged;
-import io.leego.ah.openapi.constant.BidStatus;
-import io.leego.ah.openapi.constant.CodeEnum;
-import io.leego.ah.openapi.constant.ItemGroup;
-import io.leego.ah.openapi.constant.ItemLocation;
-import io.leego.ah.openapi.constant.TimeLeft;
-import io.leego.ah.openapi.constant.VariantName;
-import io.leego.ah.openapi.constant.VariantValue;
+import io.leego.ah.openapi.enumeration.BidStatus;
+import io.leego.ah.openapi.enumeration.CodeEnum;
+import io.leego.ah.openapi.enumeration.ItemGroup;
+import io.leego.ah.openapi.enumeration.ItemLocation;
+import io.leego.ah.openapi.enumeration.TimeLeft;
+import io.leego.ah.openapi.enumeration.VariantName;
+import io.leego.ah.openapi.enumeration.VariantValue;
 import io.leego.ah.openapi.util.Option;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;

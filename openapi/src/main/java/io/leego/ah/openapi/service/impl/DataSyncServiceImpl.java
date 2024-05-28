@@ -1,10 +1,10 @@
 package io.leego.ah.openapi.service.impl;
 
 import io.leego.ah.openapi.config.DataSyncProperties;
-import io.leego.ah.openapi.dto.DataSyncDTO;
 import io.leego.ah.openapi.entity.QAuction;
 import io.leego.ah.openapi.entity.QAuctionLog;
 import io.leego.ah.openapi.entity.QExchange;
+import io.leego.ah.openapi.pojo.dto.DataSyncDTO;
 import io.leego.ah.openapi.repository.AuctionLogRepository;
 import io.leego.ah.openapi.repository.AuctionRepository;
 import io.leego.ah.openapi.repository.ExchangeRepository;

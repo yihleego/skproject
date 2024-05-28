@@ -11,20 +11,18 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import io.leego.ah.openapi.converter.InstantConverter;
+import io.leego.ah.openapi.converter.SortConverter;
 import io.leego.ah.openapi.databind.SortModule;
 import io.leego.ah.openapi.interceptor.SecurityHandlerInterceptor;
-import io.leego.ah.openapi.util.Sort;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.time.Instant;
 
 /**
  * @author Leego Yih
@@ -89,32 +87,5 @@ public class OpenApiConfiguration {
     @Bean
     public SortConverter sortConverter() {
         return new SortConverter();
-    }
-
-    public static class InstantConverter implements Converter<String, Instant> {
-        @Override
-        public Instant convert(String source) {
-            int len = source.length();
-            if (len == 0) {
-                return null;
-            }
-            if (source.charAt(len - 1) == 'Z') {
-                // 2007-12-03T10:15:30.00Z
-                return Instant.parse(source);
-            } else {
-                // 1196676930000
-                return Instant.ofEpochMilli(Long.parseLong(source));
-            }
-        }
-    }
-
-    public static class SortConverter implements Converter<String, Sort> {
-        @Override
-        public Sort convert(String source) {
-            if (source == null || source.isBlank()) {
-                return null;
-            }
-            return Sort.parse(source);
-        }
     }
 }

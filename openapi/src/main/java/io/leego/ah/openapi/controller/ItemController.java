@@ -1,10 +1,10 @@
 package io.leego.ah.openapi.controller;
 
 import io.leego.ah.openapi.annotation.Privileged;
-import io.leego.ah.openapi.dto.ItemQueryDTO;
+import io.leego.ah.openapi.pojo.dto.ItemQueryDTO;
+import io.leego.ah.openapi.pojo.vo.ItemVO;
 import io.leego.ah.openapi.service.ItemService;
 import io.leego.ah.openapi.util.Page;
-import io.leego.ah.openapi.vo.ItemVO;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;

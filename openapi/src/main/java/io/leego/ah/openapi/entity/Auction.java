@@ -41,9 +41,9 @@ public class Auction implements Persistable<Long>, Serializable {
     private Integer buyPrice;
     /** The bid price. */
     private Integer bidPrice;
-    /** @see io.leego.ah.openapi.constant.BidStatus */
+    /** @see io.leego.ah.openapi.enumeration.BidStatus */
     private String bidStatus;
-    /** @see io.leego.ah.openapi.constant.TimeLeft */
+    /** @see io.leego.ah.openapi.enumeration.TimeLeft */
     private String timeLeft;
     /** The count quantity. */
     private Integer count;
@@ -105,9 +105,9 @@ public class Auction implements Persistable<Long>, Serializable {
     @AllArgsConstructor
     @FieldNameConstants
     public static class Variant {
-        /** @see io.leego.ah.openapi.constant.VariantName */
+        /** @see io.leego.ah.openapi.enumeration.VariantName */
         private String name;
-        /** @see io.leego.ah.openapi.constant.VariantValue */
+        /** @see io.leego.ah.openapi.enumeration.VariantValue */
         private String value;
     }
 
@@ -118,7 +118,7 @@ public class Auction implements Persistable<Long>, Serializable {
     public static class Accessory {
         /** The accessory id is the item id */
         private String id;
-        /** @see io.leego.ah.openapi.constant.ItemLocation */
+        /** @see io.leego.ah.openapi.enumeration.ItemLocation */
         private String location;
     }
 }

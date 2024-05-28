@@ -1,6 +1,6 @@
 package io.leego.ah.openapi.service;
 
-import io.leego.ah.openapi.dto.DataSyncDTO;
+import io.leego.ah.openapi.pojo.dto.DataSyncDTO;
 
 import java.util.Collection;
 

@@ -1,7 +1,7 @@
 package io.leego.ah.openapi.service;
 
-import io.leego.ah.openapi.dto.ExchangeSaveDTO;
-import io.leego.ah.openapi.vo.ExchangeVO;
+import io.leego.ah.openapi.pojo.dto.ExchangeSaveDTO;
+import io.leego.ah.openapi.pojo.vo.ExchangeVO;
 
 /**
  * @author Leego Yih

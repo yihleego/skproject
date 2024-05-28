@@ -1,25 +1,24 @@
 package io.leego.ah.openapi.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.leego.ah.openapi.constant.BidStatus;
-import io.leego.ah.openapi.constant.TimeLeft;
-import io.leego.ah.openapi.dto.AuctionDTO;
-import io.leego.ah.openapi.dto.AuctionQueryDTO;
-import io.leego.ah.openapi.dto.AuctionSaveDTO;
 import io.leego.ah.openapi.entity.Auction;
 import io.leego.ah.openapi.entity.AuctionLog;
 import io.leego.ah.openapi.entity.Item;
+import io.leego.ah.openapi.enumeration.BidStatus;
+import io.leego.ah.openapi.enumeration.TimeLeft;
+import io.leego.ah.openapi.pojo.dto.AuctionDTO;
+import io.leego.ah.openapi.pojo.dto.AuctionQueryDTO;
+import io.leego.ah.openapi.pojo.dto.AuctionSaveDTO;
+import io.leego.ah.openapi.pojo.vo.AccessoryVO;
+import io.leego.ah.openapi.pojo.vo.AuctionVO;
+import io.leego.ah.openapi.pojo.vo.ColorizationVO;
+import io.leego.ah.openapi.pojo.vo.ItemVO;
 import io.leego.ah.openapi.repository.AuctionLogRepository;
 import io.leego.ah.openapi.repository.AuctionRepository;
 import io.leego.ah.openapi.repository.ItemRepository;
 import io.leego.ah.openapi.service.AuctionService;
 import io.leego.ah.openapi.service.DataSyncService;
+import io.leego.ah.openapi.util.JSONUtils;
 import io.leego.ah.openapi.util.Page;
-import io.leego.ah.openapi.vo.AccessoryVO;
-import io.leego.ah.openapi.vo.AuctionVO;
-import io.leego.ah.openapi.vo.ColorizationVO;
-import io.leego.ah.openapi.vo.ItemVO;
-import io.leego.ah.openapi.vo.VariantVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -42,7 +41,7 @@ import java.util.stream.Collectors;
  * @author Leego Yih
  */
 @Service
-public class AuctionServiceImpl extends BaseServiceImpl implements AuctionService {
+public class AuctionServiceImpl implements AuctionService {
     private static final Logger logger = LoggerFactory.getLogger(AuctionServiceImpl.class);
     private final AuctionRepository auctionRepository;
     private final AuctionLogRepository auctionLogRepository;
@@ -50,8 +49,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
     private final DataSyncService dataSyncService;
     private final ExecutorService executorService;
 
-    public AuctionServiceImpl(ObjectMapper objectMapper, AuctionRepository auctionRepository, AuctionLogRepository auctionLogRepository, ItemRepository itemRepository, DataSyncService dataSyncService) {
-        super(objectMapper);
+    public AuctionServiceImpl(AuctionRepository auctionRepository, AuctionLogRepository auctionLogRepository, ItemRepository itemRepository, DataSyncService dataSyncService) {
         this.auctionRepository = auctionRepository;
         this.auctionLogRepository = auctionLogRepository;
         this.itemRepository = itemRepository;
@@ -222,8 +220,8 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         if (old == null) {
             // Create if the original auction does not exist
             cur.makeNew();
-            cur.setVariant(writeValue(dto.getVariant()));
-            cur.setAccessory(writeValue(dto.getAccessory()));
+            cur.setVariant(JSONUtils.toString(dto.getVariant()));
+            cur.setAccessory(JSONUtils.toString(dto.getAccessory()));
             // Featured auctions have a duration that may last up to 4 days
             cur.setEstimatedEndTime(now.plus(timeLeft.getDuration(cur.getFeatured())));
         } else {
@@ -283,7 +281,7 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         List<ItemVO> items = new ArrayList<>(page.getSize());
         List<AccessoryVO> accessories = new ArrayList<>();
         Page<AuctionVO> newPage = page.map(auction -> {
-            AuctionVO auctionVO = toVO(auction);
+            AuctionVO auctionVO = AuctionVO.from(auction);
             items.add(auctionVO.getItem());
             if (auctionVO.getAccessory() != null) {
                 Collections.addAll(accessories, auctionVO.getAccessory());
@@ -294,38 +292,22 @@ public class AuctionServiceImpl extends BaseServiceImpl implements AuctionServic
         List<String> itemIds = new ArrayList<>(items.size() + accessories.size());
         itemIds.addAll(items.stream().map(ItemVO::getId).toList());
         itemIds.addAll(accessories.stream().map(AccessoryVO::getId).toList());
-        Map<String, Item> itemMap = itemRepository.findAllById(itemIds).stream()
-                .collect(Collectors.toMap(Item::getId, Function.identity()));
+        Map<String, Item> itemMap = itemRepository.findAllById(itemIds)
+                .stream().collect(Collectors.toMap(Item::getId, Function.identity()));
         for (ItemVO vo : items) {
             Item item = itemMap.get(vo.getId());
             if (item != null) {
                 BeanUtils.copyProperties(item, vo);
-                vo.setColorization(readValue(item.getColorization(), ColorizationVO[].class));
+                vo.setColorization(JSONUtils.parseArray(item.getColorization(), ColorizationVO.class));
             }
         }
         for (AccessoryVO vo : accessories) {
             Item accessory = itemMap.get(vo.getId());
             if (accessory != null) {
                 BeanUtils.copyProperties(accessory, vo);
-                vo.setColorization(readValue(accessory.getColorization(), ColorizationVO[].class));
+                vo.setColorization(JSONUtils.parseArray(accessory.getColorization(), ColorizationVO.class));
             }
         }
         return newPage;
-    }
-
-    private AuctionVO toVO(Auction auction) {
-        AuctionVO auctionVO = new AuctionVO();
-        BeanUtils.copyProperties(auction, auctionVO);
-        // Set item
-        ItemVO itemVO = new ItemVO();
-        itemVO.setId(auction.getItemId());
-        auctionVO.setItem(itemVO);
-        // Set variants
-        VariantVO[] variants = readValue(auction.getVariant(), VariantVO[].class);
-        auctionVO.setVariant(variants);
-        // Set accessories
-        AccessoryVO[] accessories = readValue(auction.getAccessory(), AccessoryVO[].class);
-        auctionVO.setAccessory(accessories);
-        return auctionVO;
     }
 }

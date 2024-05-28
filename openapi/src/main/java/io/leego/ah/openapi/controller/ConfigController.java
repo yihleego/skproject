@@ -1,8 +1,8 @@
 package io.leego.ah.openapi.controller;
 
-import io.leego.ah.openapi.dto.ConfigQueryDTO;
+import io.leego.ah.openapi.pojo.dto.ConfigQueryDTO;
+import io.leego.ah.openapi.pojo.vo.ConfigVO;
 import io.leego.ah.openapi.service.ConfigService;
-import io.leego.ah.openapi.vo.ConfigVO;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -1,7 +1,7 @@
 package io.leego.ah.openapi.service;
 
-import io.leego.ah.openapi.dto.ConfigQueryDTO;
-import io.leego.ah.openapi.vo.ConfigVO;
+import io.leego.ah.openapi.pojo.dto.ConfigQueryDTO;
+import io.leego.ah.openapi.pojo.vo.ConfigVO;
 
 import java.util.List;
 

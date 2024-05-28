@@ -1,9 +1,9 @@
 package io.leego.ah.openapi.controller;
 
 import io.leego.ah.openapi.annotation.Privileged;
-import io.leego.ah.openapi.dto.ExchangeSaveDTO;
+import io.leego.ah.openapi.pojo.dto.ExchangeSaveDTO;
+import io.leego.ah.openapi.pojo.vo.ExchangeVO;
 import io.leego.ah.openapi.service.ExchangeService;
-import io.leego.ah.openapi.vo.ExchangeVO;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;

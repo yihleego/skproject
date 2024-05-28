@@ -1,11 +1,11 @@
 package io.leego.ah.openapi.controller;
 
 import io.leego.ah.openapi.annotation.Privileged;
-import io.leego.ah.openapi.dto.AuctionQueryDTO;
-import io.leego.ah.openapi.dto.AuctionSaveDTO;
+import io.leego.ah.openapi.pojo.dto.AuctionQueryDTO;
+import io.leego.ah.openapi.pojo.dto.AuctionSaveDTO;
+import io.leego.ah.openapi.pojo.vo.AuctionVO;
 import io.leego.ah.openapi.service.AuctionService;
 import io.leego.ah.openapi.util.Page;
-import io.leego.ah.openapi.vo.AuctionVO;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;

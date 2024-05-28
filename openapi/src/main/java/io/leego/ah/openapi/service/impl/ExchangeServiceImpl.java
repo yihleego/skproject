@@ -1,13 +1,12 @@
 package io.leego.ah.openapi.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.leego.ah.openapi.dto.ExchangeSaveDTO;
 import io.leego.ah.openapi.entity.Exchange;
+import io.leego.ah.openapi.pojo.dto.ExchangeSaveDTO;
+import io.leego.ah.openapi.pojo.vo.ExchangeVO;
 import io.leego.ah.openapi.repository.ExchangeRepository;
 import io.leego.ah.openapi.service.DataSyncService;
 import io.leego.ah.openapi.service.ExchangeService;
-import io.leego.ah.openapi.vo.ExchangeVO;
-import io.leego.ah.openapi.vo.OfferVO;
+import io.leego.ah.openapi.util.JSONUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -21,13 +20,12 @@ import java.util.List;
  * @author Leego Yih
  */
 @Service
-public class ExchangeServiceImpl extends BaseServiceImpl implements ExchangeService {
+public class ExchangeServiceImpl implements ExchangeService {
     private static final Logger logger = LoggerFactory.getLogger(ExchangeServiceImpl.class);
     private final ExchangeRepository exchangeRepository;
     private final DataSyncService dataSyncService;
 
-    public ExchangeServiceImpl(ObjectMapper objectMapper, ExchangeRepository exchangeRepository, DataSyncService dataSyncService) {
-        super(objectMapper);
+    public ExchangeServiceImpl(ExchangeRepository exchangeRepository, DataSyncService dataSyncService) {
         this.exchangeRepository = exchangeRepository;
         this.dataSyncService = dataSyncService;
     }
@@ -37,8 +35,8 @@ public class ExchangeServiceImpl extends BaseServiceImpl implements ExchangeServ
         long begin = System.currentTimeMillis();
         Exchange exchange = new Exchange(null,
                 dto.getLastPrice(),
-                writeValue(dto.getBuyOffers()),
-                writeValue(dto.getSellOffers()),
+                JSONUtils.toString(dto.getBuyOffers()),
+                JSONUtils.toString(dto.getSellOffers()),
                 Instant.now());
         exchangeRepository.save(exchange);
         long end = System.currentTimeMillis();
@@ -49,15 +47,7 @@ public class ExchangeServiceImpl extends BaseServiceImpl implements ExchangeServ
     @Override
     public ExchangeVO getLatestExchange() {
         return exchangeRepository.findFirstByOrderByIdDesc()
-                .map(this::toVO)
+                .map(ExchangeVO::from)
                 .orElseThrow(() -> new HttpClientErrorException(HttpStatus.NOT_FOUND));
-    }
-
-    private ExchangeVO toVO(Exchange exchange) {
-        return new ExchangeVO(
-                exchange.getLastPrice(),
-                readValue(exchange.getBuyOffers(), OfferVO[].class),
-                readValue(exchange.getSellOffers(), OfferVO[].class),
-                exchange.getCreatedTime());
     }
 }

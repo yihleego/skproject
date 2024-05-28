@@ -26,7 +26,7 @@ public class Item implements Serializable {
     private String id;
     /** The item name. */
     private String name;
-    /** @see io.leego.ah.openapi.constant.ItemGroup */
+    /** @see io.leego.ah.openapi.enumeration.ItemGroup */
     private String group;
     /** The icon file path, located in {@literal Spiral Knights.app/Contents/Resources/java/rsrc/}. */
     private String icon;
@@ -37,7 +37,7 @@ public class Item implements Serializable {
     private Boolean level;
     /**
      * The location only for accessories.
-     * @see io.leego.ah.openapi.constant.ItemLocation
+     * @see io.leego.ah.openapi.enumeration.ItemLocation
      */
     private String location;
     /** Colorization used to recolor the icon if it exists. */

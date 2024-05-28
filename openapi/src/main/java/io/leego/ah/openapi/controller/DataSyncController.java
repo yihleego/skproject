@@ -1,6 +1,6 @@
 package io.leego.ah.openapi.controller;
 
-import io.leego.ah.openapi.dto.DataSyncDTO;
+import io.leego.ah.openapi.pojo.dto.DataSyncDTO;
 import io.leego.ah.openapi.service.DataSyncService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;

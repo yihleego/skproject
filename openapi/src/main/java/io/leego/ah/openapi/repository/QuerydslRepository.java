@@ -5,7 +5,7 @@ import io.leego.ah.openapi.util.Order;
 import io.leego.ah.openapi.util.Page;
 import io.leego.ah.openapi.util.Pageable;
 import io.leego.ah.openapi.util.Sortable;
-import org.springframework.data.querydsl.QuerydslPredicateExecutor;
+import org.springframework.data.querydsl.ListQuerydslPredicateExecutor;
 import org.springframework.data.repository.NoRepositoryBean;
 
 import java.util.ArrayList;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * @author Leego Yih
  */
 @NoRepositoryBean
-public interface QuerydslRepository<T> extends QuerydslPredicateExecutor<T> {
+public interface QuerydslRepository<T> extends ListQuerydslPredicateExecutor<T> {
 
     default Page<T> findAll(Predicate predicate, Pageable pageable) {
         if (pageable.isPaged()) {
